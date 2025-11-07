@@ -42,6 +42,10 @@ def seed_data():
         
         db.session.commit()
         
+        # Rack and bin options
+        racks = ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2', 'C3', 'D1']
+        bins = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12']
+        
         # Create ideas
         print("Creating ideas...")
         idea_names = [
@@ -72,6 +76,8 @@ def seed_data():
         for name in idea_names:
             idea = Idea(
                 name=name,
+                rack=random.choice(racks),
+                bin=random.choice(bins),
                 category_id=random.choice(categories).id,
                 user_id=random.choice(users).id
             )

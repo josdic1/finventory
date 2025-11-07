@@ -64,6 +64,8 @@ class Product(db.Model):
     __tablename__ = 'products'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), unique=True, nullable=False)
+    rack = db.Column(db.String(80), nullable=True)
+    bin = db.Column(db.String(80), nullable=True)
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     
@@ -117,6 +119,8 @@ class ProductSchema(ma.SQLAlchemyAutoSchema):
 
     id = ma.auto_field()
     name = ma.auto_field()
+    rack = ma.auto_field()
+    bin = ma.auto_field()
     category_id = ma.auto_field()
     user_id = ma.auto_field()
 
@@ -185,23 +189,22 @@ def check_session():
     return jsonify({"logged_in": False})
 
 # Categories #
-
-@app.route('/categories', methods=['GET'])
-def get_all_categories():
+@app.route('/categories/', methods=['GET'])
+def get_categories():
     categories = Category.query.all()
     return jsonify(categories_schema.dump(categories))
 
-@app.route('/categories/new', methods=['POST'])
-def create_category():
-    data = request.get_json()
-    if not data or 'name' not in data:
-        return jsonify({"error": "name required"}), 400
-    if Category.query.filter_by(name=data['name']).first():
-        return jsonify({"error": "Category name taken"}), 409
-    new_category = Category(name=data['name'])
-    db.session.add(new_category)
-    db.session.commit()
-    return category_schema.dump(new_category), 201
+# @app.route('/categories/new', methods=['POST'])
+# def create_category():
+#     data = request.get_json()
+#     if not data or 'name' not in data:
+#         return jsonify({"error": "name required"}), 400
+#     if Category.query.filter_by(name=data['name']).first():
+#         return jsonify({"error": "Category name taken"}), 409
+#     new_category = Category(name=data['name'])
+#     db.session.add(new_category)
+#     db.session.commit()
+#     return category_schema.dump(new_category), 201
 
 
 # Products  #
@@ -210,7 +213,14 @@ def create_product():
     data = request.get_json()
     if not data or 'name' not in data or 'category_id' not in data:
         return jsonify({"error": "name & category_id required"}), 400
-    new_product = Product(name=data['name'], category_id=data['category_id'], user_id=session['user_id'])
+    
+    new_product = Product(
+        name=data['name'], 
+        rack=data.get('rack'),  # .get() returns None if not present
+        bin=data.get('bin'), 
+        category_id=data['category_id'], 
+        user_id=session['user_id']
+    )
     db.session.add(new_product)
     db.session.commit()
     return product_schema.dump(new_product), 201
@@ -218,15 +228,21 @@ def create_product():
 @app.route('/products/<int:id>/edit', methods=['PATCH'])
 def update_product(id):  
     data = request.get_json()
-    if not data or 'name' not in data or 'category_id' not in data:
-        return jsonify({"error": "name & category_id required"}), 400
+    if not data or 'name' not in data:
+        return jsonify({"error": "name is required"}), 400
     
     product = Product.query.get(id)
     if not product:
         return jsonify({"error": "Product not found"}), 404
     
-    product.name = data['name']
-    product.category_id = data['category_id']
+    product.name = data['name']  # Always required
+    
+    # Optional fields - only update if provided
+    if 'rack' in data:
+        product.rack = data['rack']
+    if 'bin' in data:
+        product.bin = data['bin']
+    
     db.session.commit()
     return product_schema.dump(product), 200
 
