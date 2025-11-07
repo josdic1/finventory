@@ -4,39 +4,58 @@ import { useState, useEffect, useMemo } from "react";
 export const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
-const [ loading, setLoading ] = useState(true)
-const [ user, setUser ] = useState(null)
-const [ userInfo, setUserInfo ] = useState(null)
-const [ userCategories, setCategories ] = useState([])
-const [ allCategories, setAllCategories ] = useState([])
+    const [loading, setLoading] = useState(true);
+    const [userInfo, setUserInfo] = useState(null); // This will hold general user info
+    const [userCategories, setUserCategories] = useState([]); // This will hold user's specific categories
+    const [allCategories, setAllCategories] = useState([]); // All categories from /categories/
 
-const API_URL = 'http://localhost:5555/'
-
+    const API_URL = 'http://localhost:5555/';
 
     // Check session on mount
-useEffect(() => {
-        fetch('http://localhost:5555/check_session', {
+    useEffect(() => {
+        fetch(`${API_URL}/check_session`, {
             credentials: 'include'
         })
         .then(r => r.json())
         .then(data => {
-            if (data.logged_in) {  
-                setUser(data.user);
+            if (data.logged_in && data.user) {
+                // Create a temporary object for userInfo, excluding categories
+                const { categories, ...restOfUserInfo } = data.user;
+
+                // Set user info (excluding categories)
+                setUserInfo(restOfUserInfo);
+
+                // Set user-specific categories
+                if (categories) {
+                    setUserCategories(categories);
+                } else {
+                    setUserCategories([]); // Ensure it's an empty array if no categories
+                }
+
+            } else {
+                setUserInfo(null);
+                setUserCategories([]);
             }
             setLoading(false);
+        })
+        .catch(error => {
+            console.error("Error checking session:", error);
+            setLoading(false);
+            setUserInfo(null);
+            setUserCategories([]);
         });
     }, []);
-    
-    // Initialize products from user
-    console.log(allCategories)
-    
+
     // Fetch all categories once
     useEffect(() => {
-        fetch('http://localhost:5555/categories')
+        fetch('http://localhost:5555/categories/') // Optimized with trailing slash
         .then(r => r.json())
         .then(data => setAllCategories(data))
-    }, [])
-    
+        .catch(error => {
+            console.error("Error fetching all categories:", error);
+            setAllCategories([]);
+        });
+    }, []);
    
 
     // ============= USER FUNCTIONS =============
@@ -152,10 +171,18 @@ useEffect(() => {
     }
 
 const value = useMemo(() => {
-    return {
-        userInfo
-    }
-}, [userInfo]);
+        return {
+            loading, 
+            userInfo,
+            userCategories,
+            allCategories,
+            login,
+            logout,
+            createProduct,
+            updateProduct,
+            deleteProduct
+        };
+    }, [loading, userInfo, userCategories, allCategories]);
 
 
     if (loading) {
@@ -166,7 +193,6 @@ const value = useMemo(() => {
         <AppContext.Provider value={value}>
             {children}
         </AppContext.Provider>
-    )
+    );
 };
-
 
