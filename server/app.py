@@ -33,8 +33,8 @@ class User(db.Model):
     @property
     def categories(self):
         return db.session.query(Category)\
-                     .join(Idea)\
-                     .filter(Idea.user_id == self.id)\
+                     .join(Product)\
+                     .filter(Product.user_id == self.id)\
                      .distinct()\
                      .all()
 
@@ -55,13 +55,13 @@ class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), unique=True, nullable=False)
 
-    ideas = db.relationship('Idea', backref='category', lazy=True)
+    products = db.relationship('Product', backref='category', lazy=True)
 
     def __repr__(self):
         return '<Category %r>' % self.name
 
-class Idea(db.Model):
-    __tablename__ = 'ideas'
+class Product(db.Model):
+    __tablename__ = 'products'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), unique=True, nullable=False)
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=False)
@@ -88,11 +88,11 @@ class UserSchema(ma.SQLAlchemyAutoSchema):
     def get_categories(self, user):
         result = []
         for cat in user.categories:
-            ideas = Idea.query.filter_by(user_id=user.id, category_id=cat.id).all()
+            products = Product.query.filter_by(user_id=user.id, category_id=cat.id).all()
             result.append({
                 "id": cat.id,
                 "name": cat.name,
-                "ideas": IdeaSchema(many=True).dump(ideas)
+                "products": ProductSchema(many=True).dump(products)
             })
         return result
 
@@ -110,9 +110,9 @@ class CategorySchema(ma.SQLAlchemyAutoSchema):
 category_schema = CategorySchema()  
 categories_schema = CategorySchema(many=True)
 
-class IdeaSchema(ma.SQLAlchemyAutoSchema):
+class ProductSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
-        model = Idea
+        model = Product
         load_instance = True
 
     id = ma.auto_field()
@@ -120,8 +120,8 @@ class IdeaSchema(ma.SQLAlchemyAutoSchema):
     category_id = ma.auto_field()
     user_id = ma.auto_field()
 
-idea_schema = IdeaSchema()
-ideas_schema = IdeaSchema(many=True)
+product_schema = ProductSchema()
+products_schema = ProductSchema(many=True)
 
 
 # -------------------------------------------------
@@ -204,40 +204,40 @@ def create_category():
     return category_schema.dump(new_category), 201
 
 
-# Ideas #
-@app.route('/ideas/new', methods=['POST'])
-def create_idea():
+# Products  #
+@app.route('/products/new', methods=['POST'])
+def create_product():
     data = request.get_json()
     if not data or 'name' not in data or 'category_id' not in data:
         return jsonify({"error": "name & category_id required"}), 400
-    new_idea = Idea(name=data['name'], category_id=data['category_id'], user_id=session['user_id'])
-    db.session.add(new_idea)
+    new_product = Product(name=data['name'], category_id=data['category_id'], user_id=session['user_id'])
+    db.session.add(new_product)
     db.session.commit()
-    return idea_schema.dump(new_idea), 201
+    return product_schema.dump(new_product), 201
 
-@app.route('/ideas/<int:id>/edit', methods=['PATCH'])
-def update_idea(id):  
+@app.route('/products/<int:id>/edit', methods=['PATCH'])
+def update_product(id):  
     data = request.get_json()
     if not data or 'name' not in data or 'category_id' not in data:
         return jsonify({"error": "name & category_id required"}), 400
     
-    idea = Idea.query.get(id)
-    if not idea:
-        return jsonify({"error": "Idea not found"}), 404
+    product = Product.query.get(id)
+    if not product:
+        return jsonify({"error": "Product not found"}), 404
     
-    idea.name = data['name']
-    idea.category_id = data['category_id']
+    product.name = data['name']
+    product.category_id = data['category_id']
     db.session.commit()
-    return idea_schema.dump(idea), 200
+    return product_schema.dump(product), 200
 
-@app.route('/ideas/<int:id>', methods=['DELETE'])
-def delete_idea(id):
-    idea = Idea.query.get(id)
-    if not idea:
-        return jsonify({"error": "Idea not found"}), 404
-    db.session.delete(idea)
+@app.route('/products/<int:id>', methods=['DELETE'])
+def product(id):
+    product = Product.query.get(id)
+    if not Product:
+        return jsonify({"error": "Product not found"}), 404
+    db.session.delete(product)
     db.session.commit()
-    return jsonify({"message": "Idea deleted"}), 200
+    return jsonify({"message": "Product deleted"}), 200
 
 
 @app.route('/')
