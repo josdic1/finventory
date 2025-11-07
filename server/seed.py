@@ -1,4 +1,4 @@
-from app import app, db, bcrypt, User, Category, Idea
+from app import app, db, bcrypt, User, Category, Product
 import random
 
 def seed_data():
@@ -46,9 +46,9 @@ def seed_data():
         racks = ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2', 'C3', 'D1']
         bins = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12']
         
-        # Create ideas
-        print("Creating ideas...")
-        idea_names = [
+        # Create products
+        print("Creating products...")
+        product_names = [
             'Build a mobile app',
             'Learn Spanish',
             'Start morning routine',
@@ -73,22 +73,22 @@ def seed_data():
         
         users = [josh, dor]
         
-        for name in idea_names:
-            idea = Idea(
+        for name in product_names:
+            product = Product(
                 name=name,
                 rack=random.choice(racks),
                 bin=random.choice(bins),
                 category_id=random.choice(categories).id,
                 user_id=random.choice(users).id
             )
-            db.session.add(idea)
+            db.session.add(product)
         
         db.session.commit()
         
         print("✅ Seeding complete!")
         print(f"   - 2 users created")
         print(f"   - {len(categories)} categories created")
-        print(f"   - {len(idea_names)} ideas created")
+        print(f"   - {len(product_names)} products created")
         
         # Verify database location
         print(f"\n📁 Database location: server/app.db")
