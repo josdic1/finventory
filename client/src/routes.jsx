@@ -2,6 +2,7 @@ import App from "./App";
 import { ErrorPage } from "./pages/ErrorPage";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
+import { ProductFormEdit } from "./components/ProductFormEdit";
 import { ProductFormNew } from "./components/ProductFormNew";
 
 export const routes = [
@@ -21,6 +22,10 @@ export const routes = [
             {
                 path: "/products/new",
                 element: <ProductFormNew />,
+            },
+            {
+                path: "/products/:id/edit",
+                element: <ProductFormEdit />,
             }
         ]
     },
