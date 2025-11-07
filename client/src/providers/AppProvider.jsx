@@ -48,7 +48,7 @@ export const AppProvider = ({ children }) => {
 
     // Fetch all categories once
     useEffect(() => {
-        fetch('http://localhost:5555/categories/') // Optimized with trailing slash
+        fetch(`${API_URL}/categories/`) // Optimized with trailing slash
         .then(r => r.json())
         .then(data => setAllCategories(data))
         .catch(error => {
@@ -60,25 +60,32 @@ export const AppProvider = ({ children }) => {
 
     // ============= USER FUNCTIONS =============
     const login = async (loginObject) => {
-        const response = await fetch('http://localhost:5555/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify(loginObject)
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            setUser(data);
-            return { success: true };
-        } else {
-            return { success: false, error: data.error };
+    const response = await fetch(`${API_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(loginObject)
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+        if (data.user) { // Check if user data is present in the login response
+            const { categories, ...restOfUserInfo } = data.user;
+            setUserInfo(restOfUserInfo);
+            setUserCategories(categories || []); // Ensure it's an array
         }
-    };
+        // No need to call setUser(data) if you're using userInfo/userCategories
+
+        return { success: true };
+    } else {
+        return { success: false, error: data.error };
+    }
+};
+
 
     const logout = async () => {
-        const response = await fetch('http://localhost:5555/logout', {
+        const response = await fetch(`${API_URL}/logout`, {
             method: 'POST',
             credentials: 'include'
         });
@@ -86,8 +93,8 @@ export const AppProvider = ({ children }) => {
         const data = await response.json();
         
         if (response.ok) {
-            setUser(null);
-            setUserProducts([]);  // Clear products on logout
+            setUserInfo(null);
+            setUserCategories([]); 
             return { success: true };
         } else {
             return { success: false, error: data.error };
@@ -95,46 +102,41 @@ export const AppProvider = ({ children }) => {
     }
 
     // ============= PRODUCT FUNCTIONS =============
-    const createCategory = async (category) => {
-        const response = await fetch('http://localhost:5555/categories/new', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify(category)
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            setAllCategories(prev => [...prev, data])
-
-            return { success: true, data: data }; 
-        } else {
-            return { success: false, error: data.error };
-        }
-    }
     
-    const createProduct = async (product) => {
-        const response = await fetch('http://localhost:5555/products/new', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify(product)
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            setUserProducts(prev => [...prev, data])
+    
+ const createProduct = async (product) => {
+    const response = await fetch(`${API_URL}/products/new`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(product) 
+    });
 
-            return { success: true, data: data };
-        } else {
-            return { success: false, error: data.error };
-        }
+
+    const data = await response.json();
+
+    if (response.ok) {
+      
+        setUserCategories(prevCategories =>
+            prevCategories.map(category => {
+
+                if (category.id === data.category_id) { 
+                    return {
+                        ...category, 
+                        products: [...(category.products || []), data] 
+                    };
+                }
+                return category;
+            })
+        );
+        return { success: true, data: data };
+    } else {
+        return { success: false, error: data.error };
     }
+}
     
     const updateProduct = async (product) => {
-        const response = await fetch(`http://localhost:5555/products/${product.id}/edit`, {
+        const response = await fetch(`${API_URL}/products/${product.id}/edit`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
@@ -154,7 +156,7 @@ export const AppProvider = ({ children }) => {
     }
     
     const deleteProduct = async (id) => {
-        const response = await fetch(`http://localhost:5555/products/${id}`, {
+        const response = await fetch(`${API_URL}/products/${id}`, {
             method: 'DELETE',
             credentials: 'include'
         });

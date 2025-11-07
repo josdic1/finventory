@@ -1,9 +1,15 @@
-
+// In HomePage.jsx
+import { UserCategories } from "../components/UserCategories";
+import { useApp } from "../hooks/useApp";
 
 export function HomePage() {
+
+    const { userCategories } = useApp(); 
+
     return (
         <div>
-            <h1>Home Page</h1>
+        
+         <UserCategories categoriesToDisplay={userCategories}/> 
         </div>
     );
 }
