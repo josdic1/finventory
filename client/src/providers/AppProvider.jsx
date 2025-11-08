@@ -13,13 +13,25 @@ export const AppProvider = ({ children }) => {
     const API_URL = 'http://localhost:5555'; 
 
     // --- Data Fetching: All Categories ---
-    useEffect(() => {
-    
-      fetch(`${API_URL}/categories`)
-        .then(res => res.json())
-        .then(data => setAllCategories(data))
-        .catch(err => console.error("Failed to load categories", err));
-    }, []);
+useEffect(() => {
+        if (userInfo) {
+            fetch(`${API_URL}/categories`)
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error("Failed to load categories");
+                    }
+                    return res.json();
+                })
+                .then(data => setAllCategories(data))
+                .catch(err => {
+                    console.error("Failed to load categories", err);
+                    setAllCategories([]); 
+                });
+        } else {
+        
+             setAllCategories([]); 
+        }
+    }, [userInfo]);
 
 
     // --- Session Check ---

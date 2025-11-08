@@ -19,7 +19,7 @@ export function NavBar() {
                 ) : (
                     <>
                         <li><NavLink to="/login">Login</NavLink></li>
-                        <li><NavLink to="/signup">Register</NavLink></li>
+                        {/* <li><NavLink to="/signup">Register</NavLink></li> */}
                     </>
                 )}
             </ul>
