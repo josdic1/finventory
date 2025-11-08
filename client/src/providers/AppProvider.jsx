@@ -14,6 +14,7 @@ export const AppProvider = ({ children }) => {
 
     // --- Data Fetching: All Categories ---
     useEffect(() => {
+    
       fetch(`${API_URL}/categories`)
         .then(res => res.json())
         .then(data => setAllCategories(data))
@@ -66,7 +67,6 @@ export const AppProvider = ({ children }) => {
             id: data.id,
             name: data.name
           })
-
           setUserCategories(data.categories || []); 
           return { success: true }
         } else {
@@ -78,37 +78,37 @@ export const AppProvider = ({ children }) => {
       }
     }
 
-    const signup = async (name, password) => {
-      try {
-        const res = await fetch(`${API_URL}/signup`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ name, password })
-        })
-        const data = await res.json()
-        if (res.ok) {
-          setUserInfo({
-            id: data.id,
-            name: data.name
-          })
-          // **IMPROVEMENT: Set user categories on signup success**
-          setUserCategories(data.categories || []); 
-          return { success: true }
-        } else {
-          return { success: false, error: data.error }
-        }
-      } catch (error) {
-        console.error('Signup failed:', error)
-        return { success: false, error: error.message }
-      }
-    }
+    // const signup = async (name, password) => {
+    //   try {
+    //     const res = await fetch(`${API_URL}/signup`, {
+    //       method: 'POST',
+    //       headers: { 'Content-Type': 'application/json' },
+    //       credentials: 'include',
+    //       body: JSON.stringify({ name, password })
+    //     })
+    //     const data = await res.json()
+    //     if (res.ok) {
+    //       setUserInfo({
+    //         id: data.id,
+    //         name: data.name
+    //       })
+    //       setUserCategories(data.categories || []); 
+    //       return { success: true }
+    //     } else {
+    //       return { success: false, error: data.error }
+    //     }
+    //   } catch (error) {
+    //     console.error('Signup failed:', error)
+    //     return { success: false, error: error.message }
+    //   }
+    // }
 
     const logout = async () => {
       try {
         await fetch(`${API_URL}/logout`, { method: 'POST', credentials: 'include' })
         setUserInfo(null)
         setUserCategories([]) 
+        setAllCategories([])
         setSelectedCategoryId(null) 
       } catch (error) {
         console.error('Logout failed:', error)
@@ -120,7 +120,7 @@ export const AppProvider = ({ children }) => {
       userInfo,
       loading,
       login,
-      signup,
+    //   signup,
       logout,
       userCategories,
       allCategories,

@@ -6,6 +6,7 @@ import { ProductFormEdit } from "./components/ProductFormEdit";
 import { ProductFormNew } from "./components/ProductFormNew";
 import { ProductCard } from "./pages/ProductCard";
 
+
 export const routes = [
     {
         path: "/",

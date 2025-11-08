@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export function LoginPage() {
-    const { login } = useApp();
+    const { userInfo,login } = useApp();
     const [formData, setFormData] = useState({
         name: '',
         password: ''
@@ -19,23 +19,22 @@ export function LoginPage() {
     }   
 
     async function onLogin(e) {
-        e.preventDefault();
-        const loginObject = {
-            name: formData.name,
-            password: formData.password
-        }
-        await login(loginObject.name, loginObject.password);
-        setFormData({
-            name: '',
-            password: ''
-        })
-        navigate('/')
+    e.preventDefault();
+    if (userInfo) return; 
+
+    const result = await login(formData.name, formData.password);
+    if (result.success) {
+        setFormData({ name: '', password: '' });
+        navigate('/');
+    } else {
+        alert(result.error);
     }
+}
 
     return (
         <>
             <form onSubmit={onLogin}>
-                <button onClick={() => login('josh', '1111')}>Josh</button>
+                <button onClick={() => setFormData({ name: 'josh', password: '1111' })}>Josh</button>
             <label htmlFor="name">Name: </label>
             <input type="text" name="name" id="name" onChange={onFormChange} value={formData.name} placeholder='Enter name...'/>
              <label htmlFor="password">Password: </label>

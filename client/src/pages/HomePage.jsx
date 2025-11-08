@@ -1,4 +1,6 @@
 import { useApp } from "../hooks/useApp";
+import { StateBar } from "../components/StateBar";
+import { UserCategoriesList } from "../components/UserCategoriesList";
 
 export function HomePage() {
     const { loading } = useApp();
@@ -6,7 +8,8 @@ export function HomePage() {
 if (loading) return <p>Loading...</p>;
     return (
         <>
-            <h1>Home Page</h1>
+        <StateBar />
+        <UserCategoriesList />
 
         </>
     )
