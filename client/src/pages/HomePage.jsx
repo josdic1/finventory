@@ -1,15 +1,13 @@
-// In HomePage.jsx
-import { UserCategories } from "../components/UserCategories";
 import { useApp } from "../hooks/useApp";
 
 export function HomePage() {
+    const { loading } = useApp();
 
-    const { userCategories } = useApp(); 
-
+if (loading) return <p>Loading...</p>;
     return (
-        <div>
-        
-         <UserCategories categoriesToDisplay={userCategories}/> 
-        </div>
-    );
+        <>
+            <h1>Home Page</h1>
+
+        </>
+    )
 }
