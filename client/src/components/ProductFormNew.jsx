@@ -27,13 +27,10 @@ export function ProductFormNew() {
         const response = await createProduct(newProduct);
         
         if (response.success) {
-            // --- FIX: Activate the Category ---
+
             // This ensures the UserCategoriesList will show the products for this category
-            // when it renders on the home page.
             setActiveCategoryId(newProduct.category_id);
-            // ---------------------------------
-            
-            // Clear form (Optional but good practice)
+    
             setFormData({
                 name: '',
                 category_id: '',
