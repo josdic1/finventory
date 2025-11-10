@@ -194,51 +194,46 @@ def get_categories():
     categories = Category.query.all()
     return jsonify(categories_schema.dump(categories))
 
-### === unused ==== #
-# @app.route('/categories/new', methods=['POST'])
-# def create_category():
-#     data = request.get_json()
-#     if not data or 'name' not in data:
-#         return jsonify({"error": "name required"}), 400
-#     if Category.query.filter_by(name=data['name']).first():
-#         return jsonify({"error": "Category name taken"}), 409
-#     new_category = Category(name=data['name'])
-#     db.session.add(new_category)
-#     db.session.commit()
-#     return category_schema.dump(new_category), 201
-
 
 # Products  #
 @app.route('/products/new', methods=['POST'])
 def create_product():
+    # Check if logged in
+    if 'user_id' not in session:
+        return jsonify({"error": "Login required"}), 401
+    
     data = request.get_json()
     if not data or 'name' not in data or 'category_id' not in data:
         return jsonify({"error": "name & category_id required"}), 400
     
     new_product = Product(
         name=data['name'], 
-        rack=data.get('rack'),  # .get() returns None if not present
+        rack=data.get('rack'),
         bin=data.get('bin'), 
         category_id=data['category_id'], 
-        user_id=session['user_id']
+        user_id=session['user_id']  # Always use logged-in user's ID
     )
     db.session.add(new_product)
     db.session.commit()
     return product_schema.dump(new_product), 201
 
 @app.route('/products/<int:id>/edit', methods=['PATCH'])
-def update_product(id):  
+def update_product(id):
+    # Check if logged in
+    if 'user_id' not in session:
+        return jsonify({"error": "Login required"}), 401
+    
+    # Get product ONLY if it belongs to logged-in user
+    product = Product.query.filter_by(id=id, user_id=session['user_id']).first()
+    if not product:
+        return jsonify({"error": "Product not found"}), 404
+    
     data = request.get_json()
     if not data or 'name' not in data:
         return jsonify({"error": "name is required"}), 400
     
-    product = Product.query.get(id)
-    if not product:
-        return jsonify({"error": "Product not found"}), 404
+    product.name = data['name']
     
-    product.name = data['name']  # Always required
-    
-    # Optional fields - only update if provided
     if 'rack' in data:
         product.rack = data['rack']
     if 'bin' in data:
@@ -248,10 +243,16 @@ def update_product(id):
     return product_schema.dump(product), 200
 
 @app.route('/products/<int:id>', methods=['DELETE'])
-def product(id):
-    product = Product.query.get(id)
-    if not Product:
+def delete_product(id):
+    # Check if logged in
+    if 'user_id' not in session:
+        return jsonify({"error": "Login required"}), 401
+    
+    # Get product ONLY if it belongs to logged-in user
+    product = Product.query.filter_by(id=id, user_id=session['user_id']).first()
+    if not product:
         return jsonify({"error": "Product not found"}), 404
+    
     db.session.delete(product)
     db.session.commit()
     return jsonify({"message": "Product deleted"}), 200
