@@ -30,7 +30,7 @@ export function ProductFormEdit() {
             bin: formData.bin
         };
          
-        // Just use formData.id directly
+        // Just use formData.id directly it never changes
         const response = await updateProduct({ id: formData.id }, updatedProduct);
 
         if (response.success) {
