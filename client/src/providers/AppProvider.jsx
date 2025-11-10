@@ -7,7 +7,7 @@ export const AppProvider = ({ children }) => {
     const [userInfo, setUserInfo] = useState(null);
     const [userCategories, setUserCategories] = useState([]);
     const [allCategories, setAllCategories] = useState([]);
-    const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+    const [activeCategoryId, setActiveCategoryId] = useState(null); 
     
 
     const API_URL = 'http://localhost:5555'; 
@@ -90,55 +90,78 @@ useEffect(() => {
       }
     }
 
-    // const signup = async (name, password) => {
-    //   try {
-    //     const res = await fetch(`${API_URL}/signup`, {
-    //       method: 'POST',
-    //       headers: { 'Content-Type': 'application/json' },
-    //       credentials: 'include',
-    //       body: JSON.stringify({ name, password })
-    //     })
-    //     const data = await res.json()
-    //     if (res.ok) {
-    //       setUserInfo({
-    //         id: data.id,
-    //         name: data.name
-    //       })
-    //       setUserCategories(data.categories || []); 
-    //       return { success: true }
-    //     } else {
-    //       return { success: false, error: data.error }
-    //     }
-    //   } catch (error) {
-    //     console.error('Signup failed:', error)
-    //     return { success: false, error: error.message }
-    //   }
-    // }
-
     const logout = async () => {
       try {
         await fetch(`${API_URL}/logout`, { method: 'POST', credentials: 'include' })
         setUserInfo(null)
         setUserCategories([]) 
         setAllCategories([])
-        setSelectedCategoryId(null) 
+        setActiveCategoryId(null) 
+        setActiveCategoryId(null)
       } catch (error) {
         console.error('Logout failed:', error)
       }
     }
 
+    // --- Product Functions ---
+async function createProduct(newProduct) {
+    try {
+        const response = await fetch('http://localhost:5555/products/new', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(newProduct)
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            setUserCategories(prev => {
+                // Does this category exist in the previous array (prev)?
+                const categoryExists = prev.some(cat => cat.id === data.category_id);
+                
+                if (categoryExists) {
+                    // User already has products in this category - just add another
+                    return prev.map(cat =>
+                        cat.id === data.category_id
+                            ? { ...cat, products: [...(cat.products || []), data] }
+                            : cat
+                    );
+                } else {
+                    // User's FIRST product in this category - show the category now
+                    const newCategory = allCategories.find(c => c.id === data.category_id);
+                    if (newCategory) {
+                        return [...prev, {
+                            id: newCategory.id,
+                            name: newCategory.name,
+                            products: [data]
+                        }];
+                    }
+                    return prev;
+                }
+            });
+
+            return { success: true, data };
+        } else {
+            return { success: false, error: data.error };
+        }
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+}
+
     // --- Context Value (Memoized) ---
-    const value = useMemo(() => ({
-      userInfo,
-      loading,
-      login,
-    //   signup,
-      logout,
-      userCategories,
-      allCategories,
-      selectedCategoryId, 
-      setSelectedCategoryId,
-    }), [userInfo, loading, userCategories, allCategories, selectedCategoryId]);
+const value = useMemo(() => ({
+    userInfo,
+    loading,
+    login,
+    logout,
+    userCategories,
+    allCategories,
+    activeCategoryId,        
+    setActiveCategoryId,    
+    createProduct
+}), [userInfo, loading, userCategories, allCategories, activeCategoryId]);
 
     return (
       <AppContext.Provider value={value}>

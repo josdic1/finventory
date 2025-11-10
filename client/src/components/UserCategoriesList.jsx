@@ -1,14 +1,13 @@
 import { useApp } from "../hooks/useApp";
-import { useState } from "react";
+// import { useState } from "react"; // <-- NO LONGER NEEDED
 import { ProductItem } from "./ProductItem";
 
 export function UserCategoriesList() {
-    const { userCategories, setSelectedCategoryId } = useApp();
-    const [activeCategoryId, setActiveCategoryId] = useState(null);
+    const { userCategories, activeCategoryId, setActiveCategoryId } = useApp();
+
 
     const onCategoryClick = (category) => {
-        setSelectedCategoryId(category.id);
-        setActiveCategoryId(prevId => prevId === category.id ? null : category.id);
+        setActiveCategoryId(prevId => prevId === category.id ? null : category.id); 
     };
     
 return (
@@ -30,8 +29,6 @@ return (
                             >
                                 {category.name}
                             </button>
-                            
-        
                             {isVisible && (
                                 <ul>
                                     {category.products && category.products.length > 0 ? (

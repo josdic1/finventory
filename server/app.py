@@ -194,6 +194,7 @@ def get_categories():
     categories = Category.query.all()
     return jsonify(categories_schema.dump(categories))
 
+### === unused ==== #
 # @app.route('/categories/new', methods=['POST'])
 # def create_category():
 #     data = request.get_json()

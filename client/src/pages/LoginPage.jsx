@@ -33,14 +33,16 @@ export function LoginPage() {
 
     return (
         <>
-            <form onSubmit={onLogin}>
+            {userInfo ? (
+  <p>Already logged in as {userInfo.name}</p>
+) : (<form onSubmit={onLogin}>
                 <button onClick={() => setFormData({ name: 'josh', password: '1111' })}>Josh</button>
             <label htmlFor="name">Name: </label>
             <input type="text" name="name" id="name" onChange={onFormChange} value={formData.name} placeholder='Enter name...'/>
              <label htmlFor="password">Password: </label>
              <input type="password" name="password" id="password" onChange={onFormChange} value={formData.password} placeholder='Enter password...'/>
              <button type="submit">Login</button>
-            </form>
+            </form>)}
         </>
     )
 }   
