@@ -11,53 +11,37 @@ export function ProductFormEdit() {
         rack: '',
         bin: ''
     })
-    const [ originalProduct, setOriginalProduct ] = useState({
-        id: '',
-        name: '',
-        category_id: '',
-        rack: '',
-        bin: ''
-    })
     const { id } = useParams();
     const navigate = useNavigate();
 
     useEffect(() => {
-        const originalProduct = userCategories.flatMap(cat => cat.products).find(p => p.id === parseInt(id)); 
-        if (originalProduct) {
-            setOriginalProduct(originalProduct)
-            setFormData(originalProduct)
+        const product = userCategories.flatMap(cat => cat.products).find(p => p.id === parseInt(id)); 
+        if (product) {
+            setFormData(product)
         }
     }, [id, userCategories]);
 
-async function onUpdateSubmit(e) {
-    e.preventDefault();
-    
-    const updatedProduct = {
-        id: formData.id,
-        name: formData.name,
-        category_id: formData.category_id,
-        rack: formData.rack,
-        bin: formData.bin
-    };
-     
-    const response = await updateProduct(originalProduct, updatedProduct);
+    async function onUpdateSubmit(e) {
+        e.preventDefault();
+        
+        const updatedProduct = {
+            name: formData.name,
+            rack: formData.rack,
+            bin: formData.bin
+        };
+         
+        // Just use formData.id directly
+        const response = await updateProduct({ id: formData.id }, updatedProduct);
 
-    if (response.success) {
-        setActiveCategoryId(formData.category_id);
-        setFormData({
-            id: '',
-            name: '',
-            category_id: '',
-            rack: '',
-            bin: ''
-        });
-        navigate('/');
+        if (response.success) {
+            setActiveCategoryId(formData.category_id);
+            navigate('/');
+        }
     }
-}
 
-const handleInputChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-};
+    const handleInputChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
 
     return (
         <form onSubmit={onUpdateSubmit}>
@@ -71,19 +55,8 @@ const handleInputChange = (e) => {
                 onChange={handleInputChange} 
                 required
             />
-            <label htmlFor="category_id">Category: </label>
-            <select 
-                name="category_id" 
-                id="category_id" 
-                value={formData.category_id} 
-                onChange={handleInputChange}
-                required
-            >
-                <option value="">Select a category</option>
-                {allCategories.map((category) => (
-                    <option key={category.id} value={category.id}>{category.name}</option>
-                ))}
-            </select>
+            <p>Category: {allCategories.find(c => c.id === formData.category_id)?.name}</p>
+            
             <label htmlFor="rack">Rack: </label>
             <input 
                 type="text" 
@@ -101,7 +74,7 @@ const handleInputChange = (e) => {
                 onChange={handleInputChange} 
             />
             
-            <button type='submit'> Confirm Your Changes</button>
+            <button type='submit'>Confirm Your Changes</button>
         </form>
     )
 }

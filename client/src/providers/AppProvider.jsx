@@ -167,15 +167,14 @@ async function updateProduct(originalProduct, updatedProduct) {
         
         const data = await r.json();
         
-        // Update the product within its category
-        const updatedCatList = userCategories.map(cat => ({
+        // Just update the product in place - category NEVER CHANGES
+        setUserCategories(prev => prev.map(cat => ({
             ...cat,
             products: cat.products.map(p => 
                 p.id === data.id ? data : p
             )
-        }));
+        })));
         
-        setUserCategories(updatedCatList);
         return { success: true, data };
         
     } catch (error) {
@@ -183,7 +182,6 @@ async function updateProduct(originalProduct, updatedProduct) {
         return { success: false, error: error.message };
     }
 }
-
 
 
 async function deleteProduct(productId) {
