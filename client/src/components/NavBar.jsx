@@ -1,6 +1,7 @@
 
 import {useApp} from "../hooks/useApp";
 import { NavLink, useLocation } from "react-router-dom";
+import './NavBar.css'
 
 
 export function NavBar() {
