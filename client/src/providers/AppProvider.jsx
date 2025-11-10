@@ -106,7 +106,7 @@ useEffect(() => {
     // --- Product Functions ---
 async function createProduct(newProduct) {
     try {
-        const response = await fetch('http://localhost:5555/products/new', {
+        const response = await fetch(`${API_URL}/products/new`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
@@ -150,6 +150,34 @@ async function createProduct(newProduct) {
     }
 }
 
+async function deleteProduct(productId) {
+
+    try {
+        const response = await fetch(`${API_URL}/products/${productId}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // Remove product from all categories by ID
+            setUserCategories(prev => 
+                prev.map(cat => ({
+                    ...cat,
+                    products: cat.products.filter(p => p.id !== parseInt(productId))
+                }))
+                .filter(cat => cat.products.length > 0) // Remove empty categories
+            );
+            return { success: true };
+        } else {
+            return { success: false, error: data.error };
+        }
+    } catch (error) {
+        return { success: false, error: error.message };  
+    }
+}
+
     // --- Context Value (Memoized) ---
 const value = useMemo(() => ({
     userInfo,
@@ -160,7 +188,8 @@ const value = useMemo(() => ({
     allCategories,
     activeCategoryId,        
     setActiveCategoryId,    
-    createProduct
+    createProduct,
+    deleteProduct
 }), [userInfo, loading, userCategories, allCategories, activeCategoryId]);
 
     return (

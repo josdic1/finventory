@@ -1,7 +1,7 @@
 
 import {useApp} from "../hooks/useApp";
 import { NavLink } from "react-router-dom";
-import { DebugDashboard } from "./DebugDashboard";
+
 
 export function NavBar() {
     const { userInfo, logout, loading } = useApp(); 

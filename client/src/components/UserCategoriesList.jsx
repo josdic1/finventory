@@ -3,7 +3,7 @@ import { useApp } from "../hooks/useApp";
 import { ProductItem } from "./ProductItem";
 
 export function UserCategoriesList() {
-    const { userCategories, allCategories, activeCategoryId, setActiveCategoryId } = useApp();
+    const { userCategories, activeCategoryId, setActiveCategoryId, deleteProduct } = useApp();
 
 
     const onCategoryClick = (category) => {
@@ -33,7 +33,7 @@ return (
                                 <ul>
                                     {category.products && category.products.length > 0 ? (
                                         category.products.map((product) => (
-                                           <ProductItem key={product.id} product={product} productName={product.name}/>
+                                           <ProductItem key={product.id} product={product} productName={product.name} deleteProduct={deleteProduct}/>
                                         ))
                                     ) : (
                                         <li>No products found.</li>

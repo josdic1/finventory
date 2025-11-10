@@ -29,7 +29,7 @@ export function ProductItem({ product, deleteProduct }) {
                     Edit
                 </button>
                 <button 
-                    onClick={() => deleteProduct(product)}
+                    onClick={() => deleteProduct(product.id)}
                     className="action-delete"
                 >
                     Delete
