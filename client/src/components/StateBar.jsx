@@ -1,13 +1,14 @@
 import { useApp } from "../hooks/useApp";
 
 export function StateBar() {
-    const { loading, userInfo, userCategories, allCategories, activeCategoryId } = useApp();
+    const { loading, userInfo, userCategories, allCategories, activeCategoryId, showStateBar } = useApp();
 
 const productCount = userCategories.flatMap(cat => cat.products).length;
 
     return (
         <div>
             <h1>State Bar</h1>
+            <p>State Bar: {showStateBar ? 'true' : 'false'}</p>
             <p>Loading: {loading ? 'true' : 'false'}</p>
             <p>Logged in: {userInfo ? userInfo.name : 'false'}</p>
             <p>Categories: {userCategories.length > 0 ? userCategories.length : 'false'}</p>

@@ -5,7 +5,8 @@ import { Navigate } from "react-router-dom";
 
 
 export function HomePage() {
-    const { loading, userInfo } = useApp(); 
+    const { loading, userInfo, showStateBar } = useApp(); 
+
 
     if (loading) {
         return <p>Loading...</p>;
@@ -18,7 +19,7 @@ export function HomePage() {
     // Navigate component used bec redirection is triggered by a rendering condition
     return (
         <>
-            <StateBar />
+            {showStateBar ? <StateBar /> : '' }
             <UserCategoriesList />
       
         </>

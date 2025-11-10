@@ -8,6 +8,7 @@ export const AppProvider = ({ children }) => {
     const [userCategories, setUserCategories] = useState([]);
     const [allCategories, setAllCategories] = useState([]);
     const [activeCategoryId, setActiveCategoryId] = useState(null); 
+    const [showStateBar, setShowStateBar] = useState(true);
     
 
     const API_URL = 'http://localhost:5555'; 
@@ -189,8 +190,10 @@ const value = useMemo(() => ({
     activeCategoryId,        
     setActiveCategoryId,    
     createProduct,
-    deleteProduct
-}), [userInfo, loading, userCategories, allCategories, activeCategoryId]);
+    deleteProduct,
+    showStateBar,
+    setShowStateBar
+}), [userInfo, loading, userCategories, allCategories, activeCategoryId, showStateBar]);
 
     return (
       <AppContext.Provider value={value}>
