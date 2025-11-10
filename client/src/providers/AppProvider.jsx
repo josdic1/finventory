@@ -151,58 +151,40 @@ async function createProduct(newProduct) {
     }
 }
 
-const updateProduct = async (product, oldProduct) => {
-    const response = await fetch(`${API_URL}/products/${product.id}/edit`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(product)
-    });
-    
-    const data = await response.json();
-    
-    if (response.ok) {
-        setUserCategories(prev => {
-            // find original user's category using old Product
-            // find product in original category and eliminate
-            // add product to new category using new Product
-            // Step 1: Remove product from all categories
-            let updated = prev.map(cat => ({
-                ...cat,
-                products: cat.products.filter(p => p.id !== product.id)
-            }))
-            
-            // Step 2: Find if the target category exists
-            const targetCategory = updated.find(cat => cat.id === data.category_id)
-            
-            if (targetCategory) {
-                // Category exists - add product to it
-                updated = updated.map(cat => 
-                    cat.id === data.category_id
-                        ? { ...cat, products: [...cat.products, data] }
-                        : cat
-                )
-            } else {
-                // Category doesn't exist - create it
-                const newCategory = allCategories.find(c => c.id === data.category_id)
-                if (newCategory) {
-                    updated = [...updated, {
-                        id: newCategory.id,
-                        name: newCategory.name,
-                        products: [data]
-                    }]
-                }
-            }
-            
-            // Step 3: Remove empty categories
-            return updated.filter(cat => cat.products.length > 0)
-        })
+async function updateProduct(originalProduct, updatedProduct) {
+    try {
+        const r = await fetch(`${API_URL}/products/${originalProduct.id}/edit`, { 
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(updatedProduct)
+        });
         
-        return { success: true, data: data };
-    } else {
-        return { success: false, error: data.error };
+        if (!r.ok) {
+            const errorData = await r.json();
+            return { success: false, error: errorData.error || 'Update failed' };
+        }
+        
+        const data = await r.json();
+        
+        // Update the product within its category
+        const updatedCatList = userCategories.map(cat => ({
+            ...cat,
+            products: cat.products.map(p => 
+                p.id === data.id ? data : p
+            )
+        }));
+        
+        setUserCategories(updatedCatList);
+        return { success: true, data };
+        
+    } catch (error) {
+        console.error("❌ Caught error:", error);
+        return { success: false, error: error.message };
     }
 }
+
+
 
 async function deleteProduct(productId) {
 
