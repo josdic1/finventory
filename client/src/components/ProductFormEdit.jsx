@@ -26,27 +26,29 @@ export function ProductFormEdit() {
     }, [id, userCategories]);
 
 async function onUpdateProduct(e) {
-    e.preventDefault()
+    e.preventDefault();
+    
+    const originalCategoryId = parseInt(formData.category_id);  // ← CAPTURE ORIGINAL
+    
     const updatedProduct = {
         id: formData.id,
         name: formData.name,
         category_id: parseInt(formData.category_id),
         rack: formData.rack,
         bin: formData.bin
-    }
+    };
      
     const response = await updateProduct(originalCategoryId, updatedProduct);
     
     if (response.success) {
-        setActiveCategoryId(updatedProduct.category_id);
+        setActiveCategoryId(formData.category_id);
         setFormData({
             id: '',
             name: '',
             category_id: '',
             rack: '',
             bin: ''
-        })
-        
+        });
         navigate('/');
     }
 }

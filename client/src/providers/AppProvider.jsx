@@ -151,29 +151,54 @@ async function createProduct(newProduct) {
     }
 }
 
-async function updateProduct(updatedProduct) {
+async function updateProduct(originalCategoryId, updatedProduct) {
   try {
     const r = await fetch(`${API_URL}/products/${updatedProduct.id}/edit`, {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include', 
-      body: JSON.stringify(updatedProduct) 
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(updatedProduct)
     });
 
-    if(!r.ok) {
-      // Handle the 401, 404, or 400 error from the server
+    if (!r.ok) {
       const errorData = await r.json().catch(() => ({}));
       throw new Error(errorData.error || `HTTP error! Status: ${r.status}`);
     }
- 
-    const data = await r.json(); 
-    return { success: true, data };
 
-  } catch(error) {
+    const data = await r.json();
+
+    // UPDATE LOCAL STATE
+    setUserCategories(prev => {
+      const oldId = originalCategoryId;
+      const newId = data.category_id;
+      const prodId = data.id;
+
+      return prev
+        .map(cat => {
+          // Remove from old category if changed
+          if (cat.id === oldId && oldId !== newId) {
+            return { ...cat, products: cat.products.filter(p => p.id !== prodId) };
+          }
+          // Add to new category if changed
+          if (cat.id === newId && oldId !== newId) {
+            return { ...cat, products: [...cat.products, data] };
+          }
+          // Update in same category
+          if (cat.id === newId) {
+            return {
+              ...cat,
+              products: cat.products.map(p => (p.id === prodId ? data : p))
+            };
+          }
+          return cat;
+        })
+        .filter(cat => cat.products.length > 0); // drop empty
+    });
+
+    return { success: true, data };
+  } catch (error) {
     console.error("Error updating product:", error.message);
-    return { success: false, error: error.message }; 
+    return { success: false, error: error.message };
   }
 }
 async function deleteProduct(productId) {
