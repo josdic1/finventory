@@ -1,13 +1,15 @@
 
 import {useApp} from "../hooks/useApp";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 
 
 export function NavBar() {
     const { userInfo, logout, loading, setShowStateBar, showStateBar } = useApp(); 
+    const location = useLocation();
 
     if (loading) return <p>Loading...</p>;
 
+      const isHomePage = location.pathname === '/';
     return (
         <nav>
             <ul>
@@ -17,7 +19,7 @@ export function NavBar() {
                         <li>Welcome, {userInfo.name.toUpperCase()}!</li>
                         <li><NavLink to="/products/new">New Product</NavLink></li>
                         <li><NavLink to="/dashboard">Backend</NavLink></li>
-                        <li><button onClick={() => setShowStateBar(!showStateBar)}>State</button></li>
+                        {isHomePage && <li><button onClick={() => setShowStateBar(!showStateBar)}>State</button></li>}
                         <li><button onClick={logout}>Logout</button></li>
                     </>
                 ) : (

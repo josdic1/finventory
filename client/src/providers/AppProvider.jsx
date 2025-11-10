@@ -8,7 +8,7 @@ export const AppProvider = ({ children }) => {
     const [userCategories, setUserCategories] = useState([]);
     const [allCategories, setAllCategories] = useState([]);
     const [activeCategoryId, setActiveCategoryId] = useState(null); 
-    const [showStateBar, setShowStateBar] = useState(true);
+    const [showStateBar, setShowStateBar] = useState(false);
     
 
     const API_URL = 'http://localhost:5555'; 

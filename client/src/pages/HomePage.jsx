@@ -3,7 +3,6 @@ import { UserCategoriesList } from "../components/UserCategoriesList";
 import { StateBar } from "../components/StateBar";
 import { Navigate } from "react-router-dom"; 
 
-
 export function HomePage() {
     const { loading, userInfo, showStateBar } = useApp(); 
 
@@ -16,12 +15,13 @@ export function HomePage() {
         return <Navigate to="/login" replace />; 
     }
 
-    // Navigate component used bec redirection is triggered by a rendering condition
+    // Only show StateBar when on exact home page
+  
+
     return (
         <>
-            {showStateBar ? <StateBar /> : '' }
+            {showStateBar && <StateBar />}
             <UserCategoriesList />
-      
         </>
     );
 }
