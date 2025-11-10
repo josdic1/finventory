@@ -151,56 +151,59 @@ async function createProduct(newProduct) {
     }
 }
 
-async function updateProduct(originalCategoryId, updatedProduct) {
-  try {
-    const r = await fetch(`${API_URL}/products/${updatedProduct.id}/edit`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(updatedProduct)
+const updateProduct = async (product, oldProduct) => {
+    const response = await fetch(`${API_URL}/products/${product.id}/edit`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(product)
     });
-
-    if (!r.ok) {
-      const errorData = await r.json().catch(() => ({}));
-      throw new Error(errorData.error || `HTTP error! Status: ${r.status}`);
-    }
-
-    const data = await r.json();
-
-    // UPDATE LOCAL STATE
-    setUserCategories(prev => {
-      const oldId = originalCategoryId;
-      const newId = data.category_id;
-      const prodId = data.id;
-
-      return prev
-        .map(cat => {
-          // Remove from old category if changed
-          if (cat.id === oldId && oldId !== newId) {
-            return { ...cat, products: cat.products.filter(p => p.id !== prodId) };
-          }
-          // Add to new category if changed
-          if (cat.id === newId && oldId !== newId) {
-            return { ...cat, products: [...cat.products, data] };
-          }
-          // Update in same category
-          if (cat.id === newId) {
-            return {
-              ...cat,
-              products: cat.products.map(p => (p.id === prodId ? data : p))
-            };
-          }
-          return cat;
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+        setUserCategories(prev => {
+            // find original user's category using old Product
+            // find product in original category and eliminate
+            // add product to new category using new Product
+            // Step 1: Remove product from all categories
+            let updated = prev.map(cat => ({
+                ...cat,
+                products: cat.products.filter(p => p.id !== product.id)
+            }))
+            
+            // Step 2: Find if the target category exists
+            const targetCategory = updated.find(cat => cat.id === data.category_id)
+            
+            if (targetCategory) {
+                // Category exists - add product to it
+                updated = updated.map(cat => 
+                    cat.id === data.category_id
+                        ? { ...cat, products: [...cat.products, data] }
+                        : cat
+                )
+            } else {
+                // Category doesn't exist - create it
+                const newCategory = allCategories.find(c => c.id === data.category_id)
+                if (newCategory) {
+                    updated = [...updated, {
+                        id: newCategory.id,
+                        name: newCategory.name,
+                        products: [data]
+                    }]
+                }
+            }
+            
+            // Step 3: Remove empty categories
+            return updated.filter(cat => cat.products.length > 0)
         })
-        .filter(cat => cat.products.length > 0); // drop empty
-    });
-
-    return { success: true, data };
-  } catch (error) {
-    console.error("Error updating product:", error.message);
-    return { success: false, error: error.message };
-  }
+        
+        return { success: true, data: data };
+    } else {
+        return { success: false, error: data.error };
+    }
 }
+
 async function deleteProduct(productId) {
 
     try {
