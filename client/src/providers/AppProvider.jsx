@@ -151,6 +151,31 @@ async function createProduct(newProduct) {
     }
 }
 
+async function updateProduct(updatedProduct) {
+  try {
+    const r = await fetch(`${API_URL}/products/${updatedProduct.id}/edit`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include', 
+      body: JSON.stringify(updatedProduct) 
+    });
+
+    if(!r.ok) {
+      // Handle the 401, 404, or 400 error from the server
+      const errorData = await r.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP error! Status: ${r.status}`);
+    }
+ 
+    const data = await r.json(); 
+    return { success: true, data };
+
+  } catch(error) {
+    console.error("Error updating product:", error.message);
+    return { success: false, error: error.message }; 
+  }
+}
 async function deleteProduct(productId) {
 
     try {
@@ -190,6 +215,7 @@ const value = useMemo(() => ({
     activeCategoryId,        
     setActiveCategoryId,    
     createProduct,
+    updateProduct,
     deleteProduct,
     showStateBar,
     setShowStateBar
