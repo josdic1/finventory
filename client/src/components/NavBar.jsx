@@ -1,6 +1,8 @@
 
 import {useApp} from "../hooks/useApp";
 import { NavLink } from "react-router-dom";
+import { DebugDashboard } from "./DebugDashboard";
+
 export function NavBar() {
     const { userInfo, logout, loading } = useApp(); 
 
@@ -12,8 +14,9 @@ export function NavBar() {
                 <li><NavLink to="/">Home</NavLink></li>
                 {userInfo?.id ? (
                     <>
-                        <li>Welcome, {userInfo.name}!</li>
+                        <li>Welcome, {userInfo.name.toUpperCase()}!</li>
                         <li><NavLink to="/products/new">New Product</NavLink></li>
+                        <li><NavLink to="/dashboard">Backend</NavLink></li>
                         <li><button onClick={logout}>Logout</button></li>
                     </>
                 ) : (

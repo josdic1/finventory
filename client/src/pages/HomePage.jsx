@@ -20,6 +20,7 @@ export function HomePage() {
         <>
             <StateBar />
             <UserCategoriesList />
+      
         </>
     );
 }

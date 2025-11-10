@@ -1,4 +1,5 @@
 import App from "./App";
+import { DebugDashboard } from "./components/DebugDashboard";
 import { ErrorPage } from "./pages/ErrorPage";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
@@ -42,6 +43,10 @@ export const routes = [
                 path: "/products/:id",
                 element: <ProductCard />, 
             },
+                 {
+                        path: "/dashboard",
+                        element: <DebugDashboard />, 
+                    },
                 ],
             },
            

@@ -1,9 +1,9 @@
 import { useApp } from "../hooks/useApp";
-// import { useState } from "react"; // <-- NO LONGER NEEDED
+
 import { ProductItem } from "./ProductItem";
 
 export function UserCategoriesList() {
-    const { userCategories, activeCategoryId, setActiveCategoryId } = useApp();
+    const { userCategories, allCategories, activeCategoryId, setActiveCategoryId } = useApp();
 
 
     const onCategoryClick = (category) => {
@@ -33,7 +33,7 @@ return (
                                 <ul>
                                     {category.products && category.products.length > 0 ? (
                                         category.products.map((product) => (
-                                           <ProductItem key={product.id} product={product} />
+                                           <ProductItem key={product.id} product={product} productName={product.name}/>
                                         ))
                                     ) : (
                                         <li>No products found.</li>
