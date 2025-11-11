@@ -1,80 +1,28 @@
-import { useApp } from "../hooks/useApp"
-import { useParams, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { ProductForm } from './ProductForm';
+import { useApp } from "../hooks/useApp";
+import { useNavigate, useParams } from "react-router-dom"; // ← add useParams
+import { useEffect, useState } from "react";
 
 export function ProductFormEdit() {
-    const { allCategories, userCategories, updateProduct, activeCategoryId, setActiveCategoryId } = useApp(); 
-    const [ formData, setFormData ] = useState({
-        id: '',
-        name: '',
-        category_id: '',
-        rack: '',
-        bin: ''
-    })
-    const { id } = useParams();
-    const navigate = useNavigate();
+  const { userCategories, setActiveCategoryId } = useApp();
+  const [product, setProduct] = useState(null);
+  const { id } = useParams(); // ← now defined
+  const navigate = useNavigate();
 
-    useEffect(() => {
-        const product = userCategories.flatMap(cat => cat.products).find(p => p.id === parseInt(id)); 
-        if (product) {
-            setFormData(product)
-        }
-    }, [id, userCategories]);
+  useEffect(() => {
+    const found = userCategories.flatMap(c => c.products).find(p => p.id === parseInt(id));
+    setProduct(found || null);
+  }, [id, userCategories]);
 
-    async function onUpdateSubmit(e) {
-        e.preventDefault();
-        
-        const updatedProduct = {
-            name: formData.name,
-            rack: formData.rack,
-            bin: formData.bin
-        };
-         
-        // Just use formData.id directly it never changes
-        const response = await updateProduct({ id: formData.id }, updatedProduct);
+  if (!product) return <div>Loading...</div>;
 
-        if (response.success) {
-            setActiveCategoryId(formData.category_id);
-            navigate('/');
-        }
-    }
-
-    const handleInputChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
-
-    return (
-        <form onSubmit={onUpdateSubmit}>
-            <h2>Updating {formData.name}</h2>
-            <label htmlFor="name">Name: </label>
-            <input 
-                type="text" 
-                name="name" 
-                id="name" 
-                value={formData.name} 
-                onChange={handleInputChange} 
-                required
-            />
-            <p>Category: {allCategories.find(c => c.id === formData.category_id)?.name}</p>
-            
-            <label htmlFor="rack">Rack: </label>
-            <input 
-                type="text" 
-                name="rack" 
-                id="rack" 
-                value={formData.rack} 
-                onChange={handleInputChange} 
-            />
-            <label htmlFor="bin">Bin: </label>
-            <input 
-                type="text" 
-                name="bin" 
-                id="bin" 
-                value={formData.bin} 
-                onChange={handleInputChange} 
-            />
-            
-            <button type='submit'>Confirm Your Changes</button>
-        </form>
-    )
+  return (
+    <ProductForm 
+      product={product} 
+      onSuccess={() => {
+        setActiveCategoryId(product.category_id);
+        navigate('/');
+      }} 
+    />
+  );
 }

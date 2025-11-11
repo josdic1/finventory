@@ -1,48 +1,57 @@
 import { useApp } from '../hooks/useApp';
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useFormikForm } from '../hooks/useFormikForm';
+import { loginSchema } from '../validators/productValidation';
 
 export function LoginPage() {
-    const { userInfo,login } = useApp();
-    const [formData, setFormData] = useState({
-        name: '',
-        password: ''
-    })
-    const navigate = useNavigate();
+  const { userInfo, login } = useApp();
+  const navigate = useNavigate();
 
-    function onFormChange(e) {
-        const { name, value } = e.target;
-        setFormData({
-            ...formData,
-            [name]: value
-        })
-    }   
-
-    async function onLogin(e) {
-    e.preventDefault();
-    if (userInfo) return; 
-
-    const result = await login(formData.name, formData.password);
-    if (result.success) {
-        setFormData({ name: '', password: '' });
+  const formik = useFormikForm({
+    initialValues: { name: '', password: '' },
+    validationSchema: loginSchema,
+    onSubmit: async (values) => {
+      const result = await login(values.name, values.password);
+      if (result.success) {
+        formik.resetForm();
         navigate('/');
-    } else {
+      } else {
         alert(result.error);
+      }
     }
-}
+  });
 
-    return (
-        <>
-            {userInfo ? (
-  <p>Already logged in as {userInfo.name}</p>
-) : (<form onSubmit={onLogin}>
-                <button onClick={() => setFormData({ name: 'josh', password: '1111' })}>Josh</button>
-            <label htmlFor="name">Name: </label>
-            <input type="text" name="name" id="name" onChange={onFormChange} value={formData.name} placeholder='Enter name...'/>
-             <label htmlFor="password">Password: </label>
-             <input type="password" name="password" id="password" onChange={onFormChange} value={formData.password} placeholder='Enter password...'/>
-             <button type="submit">Login</button>
-            </form>)}
-        </>
-    )
-}   
+  if (userInfo) return <p>Already logged in as {userInfo.name}</p>;
+
+  return (
+    <form onSubmit={formik.handleSubmit}>
+
+
+      <label htmlFor="name">Name: </label>
+      <input
+        type="text"
+        name="name"
+        id="name"
+        value={formik.values.name}
+        onChange={formik.handleChange}
+        onBlur={formik.handleBlur}
+        placeholder="Enter name..."
+      />
+      {formik.touched.name && formik.errors.name && <div>{formik.errors.name}</div>}
+
+      <label htmlFor="password">Password: </label>
+      <input
+        type="password"
+        name="password"
+        id="password"
+        value={formik.values.password}
+        onChange={formik.handleChange}
+        onBlur={formik.handleBlur}
+        placeholder="Enter password..."
+      />
+      {formik.touched.password && formik.errors.password && <div>{formik.errors.password}</div>}
+
+      <button type="submit">Login</button>
+    </form>
+  );
+}

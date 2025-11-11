@@ -1,883 +1,677 @@
-import React, { useState, useRef } from 'react';
+import React, { useReducer, useState } from 'react';
+import { Plus, Trash2, ArrowRight, Code, Database, Route, Clipboard } from 'lucide-react';
 
-export function SchemaBuilder() {
-  const [mode, setMode] = useState('choose'); // choose, plain-english, outline, visual, results
-  const [projectData, setProjectData] = useState({
-    tables: [],
-    relationships: []
-  });
+// --- STYLING CONSTANTS (from Ultimate Backend Generator) ---
+const BG = '#0f172a';
+const SURFACE = '#1e293b';
+const BORDER = '#334155';
+const TEXT = '#f1f5f9';
+const PRIMARY = '#0ea5e9'; // Sky Blue
+const SUCCESS = '#10b981'; // Emerald Green
+const WARNING = '#f59e0b'; // Amber Yellow
+const ACCENT = '#8b5cf6'; // Fuchsia Pink (used for routes code)
+const DANGER = '#ef4444'; // Red
 
-  // Styles
-  const BG = '#0f172a';
-  const SURFACE = '#1e293b';
-  const BORDER = '#334155';
-  const TEXT = '#f1f5f9';
-  const PRIMARY = '#0ea5e9';
-  const SUCCESS = '#10b981';
-  const WARNING = '#f59e0b';
-  const DANGER = '#ef4444';
-  const ACCENT = '#8b5cf6';
-
-  const buttonStyle = {
-    padding: '16px 32px',
+const buttonStyle = {
+    padding: '12px 24px',
     borderRadius: '8px',
     border: 'none',
     cursor: 'pointer',
     fontSize: '16px',
     fontWeight: '600',
     transition: 'all 0.2s',
-    fontFamily: 'inherit'
-  };
+    fontFamily: 'inherit',
+};
 
-  // ==============================================
-  // MODE SELECTOR
-  // ==============================================
-  const ModeSelector = () => (
-    <div>
-      <h1 style={{ fontSize: '3rem', marginBottom: '16px', textAlign: 'center' }}>
-        🚀 Ultimate Backend Generator
-      </h1>
-      <p style={{ color: '#94a3b8', fontSize: '1.2rem', textAlign: 'center', marginBottom: '48px' }}>
-        Choose your preferred way to design your database
-      </p>
+// Utility functions (Unchanged)
+const toSnakeCase = (str) => {
+    if (!str) return '';
+    return str.replace(/([A-Z])/g, '_$1').toLowerCase().replace(/^_/, '');
+};
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-        {/* Plain English */}
-        <div
-          onClick={() => setMode('plain-english')}
-          style={{
-            padding: '32px',
-            backgroundColor: SURFACE,
-            borderRadius: '16px',
-            border: `2px solid ${BORDER}`,
-            cursor: 'pointer',
-            transition: 'all 0.3s',
-            ':hover': { borderColor: PRIMARY }
-          }}
-        >
-          <div style={{ fontSize: '3rem', marginBottom: '16px' }}>📝</div>
-          <h2 style={{ fontSize: '1.5rem', marginBottom: '12px', color: PRIMARY }}>
-            Plain English
-          </h2>
-          <p style={{ color: '#94a3b8', lineHeight: '1.6' }}>
-            Just type it out:<br/>
-            "User owns Products"<br/>
-            "Product belongs to Category"<br/>
-            Done.
-          </p>
-          <div style={{ marginTop: '20px', color: SUCCESS, fontWeight: 'bold' }}>
-            ⚡ Fastest
-          </div>
-        </div>
+const pluralize = (word) => {
+    if (!word) return '';
+    if (word.endsWith('y') && !['a', 'e', 'i', 'o', 'u'].includes(word.slice(-2, -1).toLowerCase())) {
+        return word.slice(0, -1) + 'ies';
+    }
+    if (word.endsWith('s') || word.endsWith('x') || word.endsWith('z') || word.endsWith('ch') || word.endsWith('sh')) {
+        return word + 'es';
+    }
+    return word + 's';
+};
 
-        {/* Outline Builder */}
-        <div
-          onClick={() => setMode('outline')}
-          style={{
-            padding: '32px',
-            backgroundColor: SURFACE,
-            borderRadius: '16px',
-            border: `2px solid ${BORDER}`,
-            cursor: 'pointer',
-            transition: 'all 0.3s'
-          }}
-        >
-          <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🌳</div>
-          <h2 style={{ fontSize: '1.5rem', marginBottom: '12px', color: WARNING }}>
-            Outline Tree
-          </h2>
-          <p style={{ color: '#94a3b8', lineHeight: '1.6' }}>
-            Expand/collapse like a file system:<br/>
-            📁 User<br/>
-            &nbsp;&nbsp;└ 📄 Products<br/>
-            Click to define relationships.
-          </p>
-          <div style={{ marginTop: '20px', color: WARNING, fontWeight: 'bold' }}>
-            📊 Most Visual
-          </div>
-        </div>
+function getBridgeTableName(entity1, entity2) {
+    const sorted = [entity1, entity2].sort();
+    return `${toSnakeCase(sorted[0])}_${toSnakeCase(pluralize(sorted[1]))}`;
+}
 
-        {/* Drag & Drop */}
-        <div
-          onClick={() => setMode('visual')}
-          style={{
-            padding: '32px',
-            backgroundColor: SURFACE,
-            borderRadius: '16px',
-            border: `2px solid ${BORDER}`,
-            cursor: 'pointer',
-            transition: 'all 0.3s'
-          }}
-        >
-          <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🎨</div>
-          <h2 style={{ fontSize: '1.5rem', marginBottom: '12px', color: ACCENT }}>
-            Drag & Drop
-          </h2>
-          <p style={{ color: '#94a3b8', lineHeight: '1.6' }}>
-            Visual canvas:<br/>
-            Drag boxes around<br/>
-            Draw arrows between them<br/>
-            See it come to life!
-          </p>
-          <div style={{ marginTop: '20px', color: ACCENT, fontWeight: 'bold' }}>
-            🎯 Most Intuitive
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+function processRelationships(entities, relationships) {
+    const entityRelationships = {};
+    const Boolean = (val) => !!val;
 
-  // ==============================================
-  // MODE 1: PLAIN ENGLISH
-  // ==============================================
-  const PlainEnglishMode = () => {
-    const [text, setText] = useState('User owns Products\nProduct belongs to Category\nProduct belongs to User');
+    entities.forEach(e => { if (e.name) entityRelationships[e.name] = []; });
 
-    const parseEnglish = () => {
-      const lines = text.split('\n').filter(l => l.trim());
-      const tables = new Set();
-      const relationships = [];
+    relationships.forEach(rel => {
+        const { entity1, entity2, entity1HasMany, entity2HasMany } = rel;
+        if (entity1HasMany === null || entity2HasMany === null) return;
+        if (!entity1HasMany && !entity2HasMany) return;
 
-      lines.forEach(line => {
-        const lower = line.toLowerCase().trim();
-        
-        // Pattern: "X owns Y" or "X has Y"
-        const ownsMatch = lower.match(/^(\w+)\s+(owns?|has|have)\s+(\w+)s?$/);
-        if (ownsMatch) {
-          const owner = capitalize(ownsMatch[1]);
-          const owned = capitalize(ownsMatch[3]);
-          tables.add(owner);
-          tables.add(owned);
-          relationships.push({
-            from: owner,
-            to: owned,
-            type: 'owns',
-            foreignKey: `${owner.toLowerCase()}_id`
-          });
-        }
-
-        // Pattern: "X belongs to Y"
-        const belongsMatch = lower.match(/^(\w+)s?\s+belongs?\s+to\s+(\w+)$/);
-        if (belongsMatch) {
-          const owned = capitalize(belongsMatch[1]);
-          const owner = capitalize(belongsMatch[2]);
-          tables.add(owner);
-          tables.add(owned);
-          relationships.push({
-            from: owner,
-            to: owned,
-            type: 'owns',
-            foreignKey: `${owner.toLowerCase()}_id`
-          });
-        }
-
-        // Pattern: "X classified by Y" or "X organized by Y"
-        const classifiedMatch = lower.match(/^(\w+)s?\s+(classified|organized|categorized)\s+by\s+(\w+)$/);
-        if (classifiedMatch) {
-          const item = capitalize(classifiedMatch[1]);
-          const classifier = capitalize(classifiedMatch[3]);
-          tables.add(item);
-          tables.add(classifier);
-          relationships.push({
-            from: classifier,
-            to: item,
-            type: 'classifies',
-            foreignKey: `${classifier.toLowerCase()}_id`
-          });
-        }
-      });
-
-      // Build table objects
-      const tableObjects = Array.from(tables).map(name => ({
-        name,
-        columns: [
-          { name: 'id', type: 'Integer', isPrimaryKey: true },
-          { name: 'name', type: 'String', length: 80 }
-        ]
-      }));
-
-      // Add foreign key columns
-      relationships.forEach(rel => {
-        const table = tableObjects.find(t => t.name === rel.to);
-        if (table && !table.columns.find(c => c.name === rel.foreignKey)) {
-          table.columns.push({
-            name: rel.foreignKey,
-            type: 'Integer',
-            isForeignKey: true,
-            references: `${rel.from.toLowerCase()}s.id`
-          });
-        }
-      });
-
-      setProjectData({ tables: tableObjects, relationships });
-      generateCode({ tables: tableObjects, relationships });
-      setMode('results');
-    };
-
-    return (
-      <div>
-        <button
-          onClick={() => setMode('choose')}
-          style={{
-            ...buttonStyle,
-            backgroundColor: 'transparent',
-            color: TEXT,
-            border: `2px solid ${BORDER}`,
-            marginBottom: '24px'
-          }}
-        >
-          ← Back
-        </button>
-
-        <h2 style={{ fontSize: '2rem', marginBottom: '24px', color: PRIMARY }}>
-          📝 Plain English Mode
-        </h2>
-
-        <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: SURFACE, borderRadius: '12px' }}>
-          <h3 style={{ fontSize: '1.2rem', marginBottom: '12px', color: TEXT }}>
-            How to write it:
-          </h3>
-          <ul style={{ color: '#94a3b8', lineHeight: '2' }}>
-            <li><strong style={{ color: SUCCESS }}>Ownership:</strong> "User owns Products" or "User has Products"</li>
-            <li><strong style={{ color: WARNING }}>Classification:</strong> "Product classified by Category"</li>
-            <li><strong style={{ color: ACCENT }}>Reverse:</strong> "Product belongs to User"</li>
-          </ul>
-        </div>
-
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="User owns Products&#10;Product belongs to Category&#10;Post has Comments&#10;Comment belongs to User"
-          style={{
-            width: '100%',
-            minHeight: '300px',
-            padding: '20px',
-            fontSize: '16px',
-            fontFamily: 'monospace',
-            backgroundColor: SURFACE,
-            color: TEXT,
-            border: `2px solid ${BORDER}`,
-            borderRadius: '12px',
-            resize: 'vertical',
-            marginBottom: '24px'
-          }}
-        />
-
-        <button
-          onClick={parseEnglish}
-          style={{
-            ...buttonStyle,
-            backgroundColor: PRIMARY,
-            color: '#fff',
-            width: '100%',
-            padding: '20px',
-            fontSize: '18px'
-          }}
-        >
-          🚀 Generate Backend Code
-        </button>
-      </div>
-    );
-  };
-
-  // ==============================================
-  // MODE 2: OUTLINE TREE
-  // ==============================================
-  const OutlineMode = () => {
-    const [tables, setTables] = useState([
-      { name: 'User', expanded: true, owns: [], classifiedBy: [] },
-      { name: 'Product', expanded: false, owns: [], classifiedBy: [] },
-      { name: 'Category', expanded: false, owns: [], classifiedBy: [] }
-    ]);
-    const [newTableName, setNewTableName] = useState('');
-
-    const addTable = () => {
-      if (!newTableName.trim()) return;
-      setTables([...tables, { 
-        name: capitalize(newTableName.trim()), 
-        expanded: false, 
-        owns: [], 
-        classifiedBy: [] 
-      }]);
-      setNewTableName('');
-    };
-
-    const toggleExpanded = (idx) => {
-      setTables(tables.map((t, i) => i === idx ? { ...t, expanded: !t.expanded } : t));
-    };
-
-    const addOwnership = (ownerIdx, ownedName) => {
-      setTables(tables.map((t, i) => 
-        i === ownerIdx && !t.owns.includes(ownedName)
-          ? { ...t, owns: [...t.owns, ownedName] }
-          : t
-      ));
-    };
-
-    const addClassification = (itemIdx, classifierName) => {
-      setTables(tables.map((t, i) => 
-        i === itemIdx && !t.classifiedBy.includes(classifierName)
-          ? { ...t, classifiedBy: [...t.classifiedBy, classifierName] }
-          : t
-      ));
-    };
-
-    const generateFromOutline = () => {
-      const tableObjects = tables.map(t => ({
-        name: t.name,
-        columns: [
-          { name: 'id', type: 'Integer', isPrimaryKey: true },
-          { name: 'name', type: 'String', length: 80 }
-        ]
-      }));
-
-      const relationships = [];
-
-      tables.forEach(table => {
-        // Add foreign keys for things this table owns
-        table.owns.forEach(ownedName => {
-          const ownedTable = tableObjects.find(t => t.name === ownedName);
-          if (ownedTable) {
-            const fkName = `${table.name.toLowerCase()}_id`;
-            if (!ownedTable.columns.find(c => c.name === fkName)) {
-              ownedTable.columns.push({
-                name: fkName,
-                type: 'Integer',
-                isForeignKey: true,
-                references: `${table.name.toLowerCase()}s.id`
-              });
-            }
-            relationships.push({ from: table.name, to: ownedName, type: 'owns' });
-          }
-        });
-
-        // Add foreign keys for things that classify this table
-        table.classifiedBy.forEach(classifierName => {
-          const thisTable = tableObjects.find(t => t.name === table.name);
-          if (thisTable) {
-            const fkName = `${classifierName.toLowerCase()}_id`;
-            if (!thisTable.columns.find(c => c.name === fkName)) {
-              thisTable.columns.push({
-                name: fkName,
-                type: 'Integer',
-                isForeignKey: true,
-                references: `${classifierName.toLowerCase()}s.id`
-              });
-            }
-            relationships.push({ from: classifierName, to: table.name, type: 'classifies' });
-          }
-        });
-      });
-
-      setProjectData({ tables: tableObjects, relationships });
-      generateCode({ tables: tableObjects, relationships });
-      setMode('results');
-    };
-
-    return (
-      <div>
-        <button
-          onClick={() => setMode('choose')}
-          style={{
-            ...buttonStyle,
-            backgroundColor: 'transparent',
-            color: TEXT,
-            border: `2px solid ${BORDER}`,
-            marginBottom: '24px'
-          }}
-        >
-          ← Back
-        </button>
-
-        <h2 style={{ fontSize: '2rem', marginBottom: '24px', color: WARNING }}>
-          🌳 Outline Tree Mode
-        </h2>
-
-        <div style={{ marginBottom: '24px', display: 'flex', gap: '12px' }}>
-          <input
-            value={newTableName}
-            onChange={(e) => setNewTableName(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && addTable()}
-            placeholder="New table name..."
-            style={{
-              flex: 1,
-              padding: '14px',
-              fontSize: '16px',
-              backgroundColor: SURFACE,
-              color: TEXT,
-              border: `2px solid ${BORDER}`,
-              borderRadius: '8px'
-            }}
-          />
-          <button
-            onClick={addTable}
-            style={{
-              ...buttonStyle,
-              backgroundColor: SUCCESS,
-              color: '#fff'
-            }}
-          >
-            + Add Table
-          </button>
-        </div>
-
-        <div style={{ marginBottom: '32px' }}>
-          {tables.map((table, idx) => (
-            <div key={idx} style={{ marginBottom: '12px' }}>
-              <div
-                onClick={() => toggleExpanded(idx)}
-                style={{
-                  padding: '16px',
-                  backgroundColor: SURFACE,
-                  border: `2px solid ${BORDER}`,
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  fontWeight: 'bold',
-                  fontSize: '16px'
-                }}
-              >
-                <span style={{ fontSize: '20px' }}>{table.expanded ? '📂' : '📁'}</span>
-                <span style={{ color: TEXT }}>{table.name}</span>
-                {(table.owns.length > 0 || table.classifiedBy.length > 0) && (
-                  <span style={{ marginLeft: 'auto', color: '#64748b', fontSize: '14px' }}>
-                    {table.owns.length + table.classifiedBy.length} relationships
-                  </span>
-                )}
-              </div>
-
-              {table.expanded && (
-                <div style={{ marginLeft: '32px', marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {/* What does this table OWN? */}
-                  <div style={{ padding: '16px', backgroundColor: BG, borderRadius: '8px' }}>
-                    <div style={{ color: SUCCESS, fontWeight: 'bold', marginBottom: '12px' }}>
-                      ✓ {table.name} owns:
-                    </div>
-                    {table.owns.length === 0 ? (
-                      <div style={{ color: '#64748b', fontStyle: 'italic' }}>Nothing yet</div>
-                    ) : (
-                      table.owns.map((owned, i) => (
-                        <div key={i} style={{ color: TEXT, marginBottom: '4px' }}>
-                          └ {owned}
-                        </div>
-                      ))
-                    )}
-                    <select
-                      onChange={(e) => {
-                        if (e.target.value) addOwnership(idx, e.target.value);
-                        e.target.value = '';
-                      }}
-                      style={{
-                        marginTop: '8px',
-                        padding: '8px',
-                        backgroundColor: SURFACE,
-                        color: TEXT,
-                        border: `1px solid ${BORDER}`,
-                        borderRadius: '6px',
-                        width: '100%'
-                      }}
-                    >
-                      <option value="">+ Add ownership...</option>
-                      {tables.filter(t => t.name !== table.name).map((t, i) => (
-                        <option key={i} value={t.name}>{t.name}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* What CLASSIFIES this table? */}
-                  <div style={{ padding: '16px', backgroundColor: BG, borderRadius: '8px' }}>
-                    <div style={{ color: WARNING, fontWeight: 'bold', marginBottom: '12px' }}>
-                      🏷️ {table.name} classified by:
-                    </div>
-                    {table.classifiedBy.length === 0 ? (
-                      <div style={{ color: '#64748b', fontStyle: 'italic' }}>Nothing yet</div>
-                    ) : (
-                      table.classifiedBy.map((classifier, i) => (
-                        <div key={i} style={{ color: TEXT, marginBottom: '4px' }}>
-                          └ {classifier}
-                        </div>
-                      ))
-                    )}
-                    <select
-                      onChange={(e) => {
-                        if (e.target.value) addClassification(idx, e.target.value);
-                        e.target.value = '';
-                      }}
-                      style={{
-                        marginTop: '8px',
-                        padding: '8px',
-                        backgroundColor: SURFACE,
-                        color: TEXT,
-                        border: `1px solid ${BORDER}`,
-                        borderRadius: '6px',
-                        width: '100%'
-                      }}
-                    >
-                      <option value="">+ Add classification...</option>
-                      {tables.filter(t => t.name !== table.name).map((t, i) => (
-                        <option key={i} value={t.name}>{t.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        <button
-          onClick={generateFromOutline}
-          style={{
-            ...buttonStyle,
-            backgroundColor: PRIMARY,
-            color: '#fff',
-            width: '100%',
-            padding: '20px',
-            fontSize: '18px'
-          }}
-        >
-          🚀 Generate Backend Code
-        </button>
-      </div>
-    );
-  };
-
-  // ==============================================
-  // MODE 3: VISUAL DRAG & DROP
-  // ==============================================
-  const VisualMode = () => {
-    const [tables, setTables] = useState([
-      { id: 1, name: 'User', x: 100, y: 100 },
-      { id: 2, name: 'Product', x: 400, y: 100 },
-      { id: 3, name: 'Category', x: 700, y: 100 }
-    ]);
-    const [connections, setConnections] = useState([]);
-    const [dragging, setDragging] = useState(null);
-    const [connecting, setConnecting] = useState(null);
-    const canvasRef = useRef(null);
-
-    const handleMouseDown = (e, tableId) => {
-      if (e.shiftKey) {
-        setConnecting(tableId);
-      } else {
-        setDragging(tableId);
-      }
-    };
-
-    const handleMouseMove = (e) => {
-      if (dragging !== null) {
-        const rect = canvasRef.current.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        setTables(tables.map(t => 
-          t.id === dragging ? { ...t, x: x - 75, y: y - 40 } : t
-        ));
-      }
-    };
-
-    const handleMouseUp = (e, tableId) => {
-      if (connecting !== null && tableId && connecting !== tableId) {
-        const fromTable = tables.find(t => t.id === connecting);
-        const toTable = tables.find(t => t.id === tableId);
-        
-        setConnections([...connections, {
-          from: connecting,
-          to: tableId,
-          fromName: fromTable.name,
-          toName: toTable.name,
-          type: 'owns'
-        }]);
-      }
-      setDragging(null);
-      setConnecting(null);
-    };
-
-    const generateFromVisual = () => {
-      const tableObjects = tables.map(t => ({
-        name: t.name,
-        columns: [
-          { name: 'id', type: 'Integer', isPrimaryKey: true },
-          { name: 'name', type: 'String', length: 80 }
-        ]
-      }));
-
-      connections.forEach(conn => {
-        const toTable = tableObjects.find(t => t.name === conn.toName);
-        if (toTable) {
-          const fkName = `${conn.fromName.toLowerCase()}_id`;
-          if (!toTable.columns.find(c => c.name === fkName)) {
-            toTable.columns.push({
-              name: fkName,
-              type: 'Integer',
-              isForeignKey: true,
-              references: `${conn.fromName.toLowerCase()}s.id`
+        if (entity1HasMany && entity2HasMany) {
+            entityRelationships[entity1].push({
+                type: 'many-to-many',
+                target: entity2,
+                backPopulates: toSnakeCase(pluralize(entity1)),
+                relationshipName: toSnakeCase(pluralize(entity2))
             });
-          }
+            entityRelationships[entity2].push({
+                type: 'many-to-many',
+                target: entity1,
+                backPopulates: toSnakeCase(pluralize(entity2)),
+                relationshipName: toSnakeCase(pluralize(entity1))
+            });
+        } else if (entity1HasMany && !entity2HasMany) {
+            entityRelationships[entity1].push({
+                type: 'one-to-many',
+                target: entity2,
+                backPopulates: toSnakeCase(entity1),
+                relationshipName: toSnakeCase(pluralize(entity2))
+            });
+            entityRelationships[entity2].push({
+                type: 'many-to-one',
+                target: entity1,
+                backPopulates: toSnakeCase(pluralize(entity2)),
+                relationshipName: toSnakeCase(entity1)
+            });
+        } else if (!entity1HasMany && entity2HasMany) {
+            entityRelationships[entity2].push({
+                type: 'one-to-many',
+                target: entity1,
+                backPopulates: toSnakeCase(entity2),
+                relationshipName: toSnakeCase(pluralize(entity1))
+            });
+            entityRelationships[entity1].push({
+                type: 'many-to-one',
+                target: entity2,
+                backPopulates: toSnakeCase(pluralize(entity1)),
+                relationshipName: toSnakeCase(entity2)
+            });
         }
-      });
+    });
+    return entityRelationships;
+}
 
-      setProjectData({ tables: tableObjects, relationships: connections });
-      generateCode({ tables: tableObjects, relationships: connections });
-      setMode('results');
-    };
+function generateModelsCode(entities, entityRelationships, projectName) {
+    let code = `# Generated Models for ${projectName}\n\n`;
+    code += `from .extensions import db\n`;
+    code += `from datetime import datetime, timezone\n\n`;
 
-    return (
-      <div>
-        <button
-          onClick={() => setMode('choose')}
-          style={{
-            ...buttonStyle,
-            backgroundColor: 'transparent',
-            color: TEXT,
-            border: `2px solid ${BORDER}`,
-            marginBottom: '24px'
-          }}
-        >
-          ← Back
-        </button>
+    const bridgeTables = new Set();
+    const Boolean = (val) => !!val;
 
-        <h2 style={{ fontSize: '2rem', marginBottom: '16px', color: ACCENT }}>
-          🎨 Visual Drag & Drop Mode
-        </h2>
+    Object.entries(entityRelationships).forEach(([entityName, rels]) => {
+        rels.filter(r => r.type === 'many-to-many').forEach(rel => {
+            const bridgeName = getBridgeTableName(entityName, rel.target);
 
-        <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: SURFACE, borderRadius: '12px' }}>
-          <div style={{ color: '#94a3b8', fontSize: '14px' }}>
-            <strong style={{ color: TEXT }}>How to use:</strong><br/>
-            • Drag boxes to move them<br/>
-            • Hold SHIFT + Drag from one box to another to connect<br/>
-            • Arrow means "from owns to"
-          </div>
-        </div>
+            if (!bridgeTables.has(bridgeName)) {
+                bridgeTables.add(bridgeName);
+                const sorted = [entityName, rel.target].sort();
 
-        <div
-          ref={canvasRef}
-          onMouseMove={handleMouseMove}
-          onMouseUp={() => handleMouseUp(null, null)}
-          style={{
-            position: 'relative',
-            width: '100%',
-            height: '500px',
-            backgroundColor: BG,
-            border: `2px solid ${BORDER}`,
-            borderRadius: '12px',
-            marginBottom: '24px',
-            cursor: dragging ? 'grabbing' : 'default'
-          }}
-        >
-          {/* Draw connections */}
-          <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
-            {connections.map((conn, idx) => {
-              const from = tables.find(t => t.id === conn.from);
-              const to = tables.find(t => t.id === conn.to);
-              if (!from || !to) return null;
-              return (
-                <line
-                  key={idx}
-                  x1={from.x + 75}
-                  y1={from.y + 40}
-                  x2={to.x + 75}
-                  y2={to.y + 40}
-                  stroke={PRIMARY}
-                  strokeWidth="3"
-                  markerEnd="url(#arrowhead)"
-                />
-              );
-            })}
-            <defs>
-              <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-                <polygon points="0 0, 10 3, 0 6" fill={PRIMARY} />
-              </marker>
-            </defs>
-          </svg>
-
-          {/* Draw tables */}
-          {tables.map(table => (
-            <div
-              key={table.id}
-              onMouseDown={(e) => handleMouseDown(e, table.id)}
-              onMouseUp={(e) => handleMouseUp(e, table.id)}
-              style={{
-                position: 'absolute',
-                left: table.x,
-                top: table.y,
-                width: '150px',
-                height: '80px',
-                backgroundColor: SURFACE,
-                border: `3px solid ${connecting === table.id ? SUCCESS : PRIMARY}`,
-                borderRadius: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 'bold',
-                fontSize: '16px',
-                cursor: 'grab',
-                userSelect: 'none',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
-              }}
-            >
-              {table.name}
-            </div>
-          ))}
-        </div>
-
-        <button
-          onClick={generateFromVisual}
-          style={{
-            ...buttonStyle,
-            backgroundColor: PRIMARY,
-            color: '#fff',
-            width: '100%',
-            padding: '20px',
-            fontSize: '18px'
-          }}
-        >
-          🚀 Generate Backend Code
-        </button>
-      </div>
-    );
-  };
-
-  // ==============================================
-  // RESULTS VIEW
-  // ==============================================
-  const [generatedCode, setGeneratedCode] = useState({});
-
-  const generateCode = (data) => {
-    // Generate models
-    let models = '# models.py\nfrom extensions import db\n\n';
-    data.tables.forEach(table => {
-      models += `class ${table.name}(db.Model):\n`;
-      models += `    __tablename__ = '${table.name.toLowerCase()}s'\n\n`;
-      table.columns.forEach(col => {
-        let line = `    ${col.name} = db.Column(db.${col.type}`;
-        if (col.length) line += `(${col.length})`;
-        if (col.isPrimaryKey) line += ', primary_key=True';
-        if (col.isForeignKey) line += `, db.ForeignKey('${col.references}')`;
-        line += ')\n';
-        models += line;
-      });
-      models += '\n';
-
-      // Add relationships
-      data.relationships.forEach(rel => {
-        if (rel.from === table.name) {
-          models += `    ${rel.to.toLowerCase()}s = db.relationship('${rel.to}', back_populates='${table.name.toLowerCase()}')\n`;
-        }
-        if (rel.to === table.name) {
-          models += `    ${rel.from.toLowerCase()} = db.relationship('${rel.from}', back_populates='${table.name.toLowerCase()}s')\n`;
-        }
-      });
-
-      models += '\n';
+                code += `${bridgeName} = db.Table('${bridgeName}',\n`;
+                code += `    db.Column('${toSnakeCase(sorted[0])}_id', db.Integer, db.ForeignKey('${toSnakeCase(pluralize(sorted[0]))}.id'), primary_key=True),\n`;
+                code += `    db.Column('${toSnakeCase(sorted[1])}_id', db.Integer, db.ForeignKey('${toSnakeCase(pluralize(sorted[1]))}.id'), primary_key=True)\n`;
+                code += `)\n\n`;
+            }
+        });
     });
 
-    setGeneratedCode({ models });
-  };
+    entities.forEach(entity => {
+        if (!entity.name) return;
+        const rels = entityRelationships[entity.name] || [];
 
-  const ResultsView = () => {
-    const [copied, setCopied] = useState(false);
+        code += `class ${entity.name}(db.Model):\n`;
+        code += `    __tablename__ = '${toSnakeCase(pluralize(entity.name))}'\n\n`;
+        code += `    id = db.Column(db.Integer, primary_key=True)\n`;
 
-    const copyCode = () => {
-      navigator.clipboard.writeText(generatedCode.models);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+        entity.fields.forEach(field => {
+            if (field.name) {
+                let dbType;
+                switch (field.type) {
+                    case 'String': dbType = 'db.String(255)'; break;
+                    case 'Integer': dbType = 'db.Integer'; break;
+                    case 'Boolean': dbType = 'db.Boolean'; break;
+                    case 'DateTime': dbType = 'db.DateTime'; break;
+                    default: dbType = 'db.String(255)';
+                }
+                let columnArgs = field.name.toLowerCase() === 'name' ? 'nullable=False, unique=True' : 'nullable=True';
+                code += `    ${toSnakeCase(field.name)} = db.Column(${dbType}, ${columnArgs})\n`;
+            }
+        });
+
+        rels.filter(r => r.type === 'many-to-one').forEach(rel => {
+            code += `    ${toSnakeCase(rel.target)}_id = db.Column(db.Integer, db.ForeignKey('${toSnakeCase(pluralize(rel.target))}.id'), nullable=False)\n`;
+        });
+
+        code += `    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))\n`;
+        code += `    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))\n\n`;
+
+        if (rels.length > 0) {
+            code += `    # Relationships\n`;
+            rels.forEach(rel => {
+                code += `    ${rel.relationshipName} = db.relationship('${rel.target}', back_populates='${rel.backPopulates}'`;
+                if (rel.type === 'one-to-many') code += `, cascade='all, delete-orphan'`;
+                if (rel.type === 'many-to-many') {
+                    const bridgeName = getBridgeTableName(entity.name, rel.target);
+                    code += `, secondary=${bridgeName}`;
+                }
+                code += `)\n`;
+            });
+        }
+
+        const hasNameField = entity.fields.some(f => f.name.toLowerCase() === 'name');
+        code += `\n    def __repr__(self):\n`;
+        code += `        return f'<${entity.name} {self.${hasNameField ? 'name' : 'id'}}>'\n\n\n`;
+    });
+
+    return code;
+}
+
+function generateSchemasCode(entities, entityRelationships) {
+    let code = `from .extensions import ma\n`;
+    const Boolean = (val) => !!val;
+    code += `from .models import ${entities.map(e => e.name).filter(Boolean).join(', ')}\n\n`;
+
+    entities.forEach(entity => {
+        if (!entity.name) return;
+        const rels = entityRelationships[entity.name] || [];
+
+        code += `class ${entity.name}Schema(ma.SQLAlchemyAutoSchema):\n`;
+
+        if (rels.length > 0) {
+            rels.forEach(rel => {
+                const isMany = rel.type !== 'many-to-one';
+                code += `    ${rel.relationshipName} = ma.Nested('${rel.target}Schema', many=${isMany}, exclude=('${rel.backPopulates}',))\n`;
+            });
+            code += `\n`;
+        }
+
+        code += `    class Meta:\n`;
+        code += `        model = ${entity.name}\n`;
+        code += `        load_instance = True\n`;
+        code += `        include_fk = True\n\n`;
+    });
+
+    code += `# Schema instances\n`;
+    entities.forEach(entity => {
+        if (entity.name) {
+            code += `${toSnakeCase(entity.name)}_schema = ${entity.name}Schema()\n`;
+            code += `${toSnakeCase(pluralize(entity.name))}_schema = ${entity.name}Schema(many=True)\n`;
+        }
+    });
+
+    return code;
+}
+
+function generateRoutesCode(entities, entityRelationships, projectName) {
+    let code = `# Generated Routes for ${projectName}\n\n`;
+    const Boolean = (val) => !!val;
+    code += `from flask import Blueprint, request, jsonify\n`;
+    code += `from marshmallow import ValidationError\n`;
+    code += `from .extensions import db\n`;
+    code += `from .models import ${entities.map(e => e.name).filter(Boolean).join(', ')}\n`;
+    code += `from .schemas import (\n`;
+
+    const imports = [];
+    entities.forEach(e => {
+        if (e.name) {
+            const s = toSnakeCase(e.name);
+            const p = toSnakeCase(pluralize(e.name));
+            imports.push(`    ${s}_schema, ${p}_schema`);
+        }
+    });
+    code += imports.join(',\n') + '\n)\n\n';
+    code += `api_bp = Blueprint('api', __name__)\n\n`;
+
+    entities.forEach(entity => {
+        if (!entity.name) return;
+
+        const entitySnake = toSnakeCase(entity.name);
+        const entityPluralSnake = toSnakeCase(pluralize(entity.name));
+        const schemaName = `${entitySnake}_schema`;
+        const schemaPluralName = `${entityPluralSnake}_schema`;
+
+        code += `# ${entity.name.toUpperCase()} ROUTES\n`;
+        code += `@api_bp.route('/${entityPluralSnake}', methods=['GET'])\n`;
+        code += `def get_${entityPluralSnake}():\n`;
+        code += `    items = ${entity.name}.query.all()\n`;
+        code += `    return jsonify(${schemaPluralName}.dump(items))\n\n`;
+
+        code += `@api_bp.route('/${entityPluralSnake}/<int:id>', methods=['GET'])\n`;
+        code += `def get_${entitySnake}(id):\n`;
+        code += `    item = ${entity.name}.query.get_or_404(id)\n`;
+        code += `    return jsonify(${schemaName}.dump(item))\n\n`;
+
+        code += `@api_bp.route('/${entityPluralSnake}', methods=['POST'])\n`;
+        code += `def create_${entitySnake}():\n`;
+        code += `    data = request.get_json()\n`;
+        code += `    try:\n`;
+        code += `        item = ${schemaName}.load(data, session=db.session)\n`;
+        code += `        db.session.commit()\n`;
+        code += `        return jsonify(${schemaName}.dump(item)), 201\n`;
+        code += `    except ValidationError as err:\n`;
+        code += `        return jsonify({'errors': err.messages}), 400\n`;
+        code += `    except Exception as e:\n`;
+        code += `        return jsonify({'error': str(e)}), 400\n\n`;
+
+        code += `@api_bp.route('/${entityPluralSnake}/<int:id>', methods=['PUT'])\n`;
+        code += `def update_${entitySnake}(id):\n`;
+        code += `    item = ${entity.name}.query.get_or_404(id)\n`;
+        code += `    data = request.get_json()\n`;
+        code += `    try:\n`;
+        code += `        item = ${schemaName}.load(data, instance=item, session=db.session, partial=True)\n`;
+        code += `        db.session.commit()\n`;
+        code += `        return jsonify(${schemaName}.dump(item))\n`;
+        code += `    except ValidationError as err:\n`;
+        code += `        return jsonify({'errors': err.messages}), 400\n`;
+        code += `    except Exception as e:\n`;
+        code += `        return jsonify({'error': str(e)}), 400\n\n`;
+
+        code += `@api_bp.route('/${entityPluralSnake}/<int:id>', methods=['DELETE'])\n`;
+        code += `def delete_${entitySnake}(id):\n`;
+        code += `    item = ${entity.name}.query.get_or_404(id)\n`;
+        code += `    db.session.delete(item)\n`;
+        code += `    db.session.commit()\n`;
+        code += `    return '', 204\n\n`;
+    });
+
+    code += `@api_bp.route('/health', methods=['GET'])\n`;
+    code += `def health_check():\n`;
+    code += `    return jsonify({'status': 'healthy', 'project': '${projectName}'})\n`;
+
+    return code;
+}
+
+const initialState = {
+    step: 1,
+    projectName: '',
+    entities: [{ name: '', fields: [] }],
+    currentEntityIndex: 0,
+    relationships: [],
+    generatedCode: { models: '', schemas: '', routes: '' },
+};
+
+function reducer(state, action) {
+    switch (action.type) {
+        case 'SET_STEP':
+            return { ...state, step: action.payload };
+        case 'SET_PROJECT_NAME':
+            return { ...state, projectName: action.payload };
+        case 'ADD_ENTITY':
+            return { ...state, entities: [...state.entities, { name: '', fields: [] }] };
+        case 'REMOVE_ENTITY':
+            if (state.entities.length <= 1) return state;
+            return { ...state, entities: state.entities.filter((_, i) => i !== action.payload) };
+        case 'UPDATE_ENTITY_NAME':
+            const cleanName = action.payload.name
+                .replace(/\s+/g, '')
+                .replace(/[^a-zA-Z]/g, '')
+                .replace(/^\w/, c => c.toUpperCase());
+            return {
+                ...state, entities: state.entities.map((e, i) =>
+                    i === action.payload.index ? { ...e, name: cleanName } : e
+                )
+            };
+        case 'SET_CURRENT_ENTITY_INDEX':
+            return { ...state, currentEntityIndex: action.payload };
+        case 'ADD_FIELD': {
+            const newEntities = [...state.entities];
+            newEntities[action.payload].fields.push({ name: '', type: 'String' });
+            return { ...state, entities: newEntities };
+        }
+        case 'REMOVE_FIELD': {
+            const newEntities = [...state.entities];
+            newEntities[action.payload.entityIndex].fields = newEntities[action.payload.entityIndex].fields.filter((_, i) => i !== action.payload.fieldIndex);
+            return { ...state, entities: newEntities };
+        }
+        case 'UPDATE_FIELD': {
+            const newEntities = [...state.entities];
+            newEntities[action.payload.entityIndex].fields[action.payload.fieldIndex][action.payload.key] = action.payload.value;
+            return { ...state, entities: newEntities };
+        }
+        case 'SET_RELATIONSHIPS':
+            return { ...state, relationships: action.payload };
+        case 'UPDATE_RELATIONSHIP':
+            return {
+                ...state, relationships: state.relationships.map((r, i) =>
+                    i === action.payload.index ? { ...r, [action.payload.key]: action.payload.value } : r
+                )
+            };
+        case 'SET_GENERATED_CODE':
+            return { ...state, generatedCode: action.payload };
+        case 'RESET':
+            return initialState;
+        default:
+            throw new Error();
+    }
+}
+
+export function SchemaBuilder() {
+    const [state, dispatch] = useReducer(reducer, initialState);
+    const { step, projectName, entities, currentEntityIndex, relationships, generatedCode } = state;
+    const [copiedCode, setCopiedCode] = useState(null);
+
+    const askRelationships = () => {
+        const rels = [];
+        const validEntities = entities.filter(e => e.name);
+        for (let i = 0; i < validEntities.length; i++) {
+            for (let j = i + 1; j < validEntities.length; j++) {
+                rels.push({
+                    entity1: validEntities[i].name,
+                    entity2: validEntities[j].name,
+                    entity1HasMany: null,
+                    entity2HasMany: null
+                });
+            }
+        }
+        dispatch({ type: 'SET_RELATIONSHIPS', payload: rels });
+        dispatch({ type: 'SET_STEP', payload: 3 });
+    };
+
+    const handleGenerateCode = () => {
+        const entityRelationships = processRelationships(entities, relationships);
+        const models = generateModelsCode(entities, entityRelationships, projectName);
+        const schemas = generateSchemasCode(entities, entityRelationships);
+        const routes = generateRoutesCode(entities, entityRelationships, projectName);
+
+        dispatch({ type: 'SET_GENERATED_CODE', payload: { models, schemas, routes } });
+        dispatch({ type: 'SET_STEP', payload: 4 });
+    };
+
+    const copyToClipboard = (code, label) => {
+        navigator.clipboard.writeText(code);
+        setCopiedCode(label);
+        setTimeout(() => setCopiedCode(null), 2000);
     };
 
     return (
-      <div>
-        <h2 style={{ fontSize: '2rem', marginBottom: '24px', color: SUCCESS }}>
-          ✅ Your Backend is Ready!
-        </h2>
+        <div style={{ minHeight: '100vh', backgroundColor: BG, color: TEXT, padding: '40px 20px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+            <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                <div style={{ backgroundColor: SURFACE, borderRadius: '16px', boxShadow: '0 10px 15px rgba(0,0,0,0.3)', padding: '32px', border: `2px solid ${BORDER}` }}>
+                    <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                        <h1 style={{ fontSize: '2.5rem', fontWeight: '800', color: PRIMARY, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '8px' }}>
+                            <Database style={{ width: '36px', height: '36px', color: PRIMARY }} />
+                            Ultimate Backend Generator
+                        </h1>
+                        <p style={{ color: '#94a3b8' }}>Models, Schemas, and API Routes for Flask/SQLAlchemy/Marshmallow</p>
+                    </div>
 
-        <div style={{ position: 'relative', marginBottom: '24px' }}>
-          <button
-            onClick={copyCode}
-            style={{
-              ...buttonStyle,
-              position: 'absolute',
-              top: '16px',
-              right: '16px',
-              backgroundColor: copied ? SUCCESS : PRIMARY,
-              color: '#fff',
-              zIndex: 10
-            }}
-          >
-            {copied ? '✓ Copied!' : '📋 Copy'}
-          </button>
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '32px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            {[1, 2, 3, 4].map(num => (
+                                <React.Fragment key={num}>
+                                    <div style={{
+                                        width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold',
+                                        backgroundColor: step >= num ? PRIMARY : BORDER,
+                                        color: step >= num ? 'white' : '#94a3b8',
+                                        transition: 'background-color 0.3s'
+                                    }}>{num}</div>
+                                    {num < 4 && <ArrowRight style={{ width: '20px', height: '20px', color: BORDER }} />}
+                                </React.Fragment>
+                            ))}
+                        </div>
+                    </div>
 
-          <pre style={{
-            backgroundColor: '#1e1e1e',
-            color: '#d4d4d4',
-            padding: '24px',
-            borderRadius: '12px',
-            overflow: 'auto',
-            fontSize: '14px',
-            lineHeight: '1.8',
-            maxHeight: '600px'
-          }}>
-            {generatedCode.models}
-          </pre>
+                    <div style={{ borderTop: `1px solid ${BORDER}`, margin: '32px 0' }}></div>
+
+                    {step === 1 && (
+                        <div>
+                            <h2 style={{ fontSize: '2rem', fontWeight: 'bold', color: PRIMARY, marginBottom: '24px' }}>Step 1: Define Your Tables 📁</h2>
+                            <div style={{ marginBottom: '24px' }}>
+                                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#94a3b8', marginBottom: '8px' }}>Project Name</label>
+                                <input type="text" value={projectName} onChange={(e) => dispatch({ type: 'SET_PROJECT_NAME', payload: e.target.value })} placeholder="e.g., Music Tracker"
+                                    style={{
+                                        width: '100%', padding: '16px', border: `2px solid ${BORDER}`, backgroundColor: BG, borderRadius: '8px', color: TEXT, outline: 'none',
+                                        boxSizing: 'border-box'
+                                    }} />
+                            </div>
+                            <div style={{ marginBottom: '32px' }}>
+                                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#94a3b8', marginBottom: '12px' }}>Tables</label>
+                                {entities.map((entity, index) => (
+                                    <div key={index} style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'center' }}>
+                                        <input type="text" value={entity.name} onChange={(e) => dispatch({ type: 'UPDATE_ENTITY_NAME', payload: { index, name: e.target.value } })} placeholder="Entity name (e.g., User)"
+                                            style={{
+                                                flex: 1, padding: '12px', border: `2px solid ${BORDER}`, backgroundColor: BG, borderRadius: '8px', color: TEXT, outline: 'none',
+                                            }} />
+                                        {entities.length > 1 && (
+                                            <button onClick={() => dispatch({ type: 'REMOVE_ENTITY', payload: index })}
+                                                style={{ ...buttonStyle, padding: '10px 14px', backgroundColor: DANGER, color: 'white' }}>
+                                                <Trash2 style={{ width: '20px', height: '20px' }} />
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+                                <button onClick={() => dispatch({ type: 'ADD_ENTITY' })}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '8px', color: SUCCESS, fontWeight: '600', marginTop: '16px', background: 'none', border: 'none', cursor: 'pointer' }}>
+                                    <Plus style={{ width: '20px', height: '20px', color: SUCCESS }} /> Add Table
+                                </button>
+                            </div>
+                            <button onClick={() => dispatch({ type: 'SET_STEP', payload: 2 })} disabled={!projectName || entities.filter(e => e.name).length < 1}
+                                style={{
+                                    ...buttonStyle, backgroundColor: PRIMARY, color: 'white', width: '100%', padding: '20px', fontSize: '18px',
+                                    opacity: (!projectName || entities.filter(e => e.name).length < 1) ? 0.5 : 1, pointerEvents: (!projectName || entities.filter(e => e.name).length < 1) ? 'none' : 'auto'
+                                }}>
+                                Next: Add Fields →
+                            </button>
+                        </div>
+                    )}
+
+                    {step === 2 && (
+                        <div>
+                            <h2 style={{ fontSize: '2rem', fontWeight: 'bold', color: PRIMARY, marginBottom: '24px' }}>Step 2: Add Fields 📝</h2>
+                            <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap' }}>
+                                {entities.filter(e => e.name).map((entity, index) => (
+                                    <button key={index} onClick={() => dispatch({ type: 'SET_CURRENT_ENTITY_INDEX', payload: index })}
+                                        style={{
+                                            ...buttonStyle, padding: '8px 16px', borderRadius: '20px',
+                                            backgroundColor: currentEntityIndex === index ? PRIMARY : BORDER,
+                                            color: currentEntityIndex === index ? 'white' : '#94a3b8',
+                                        }}>
+                                        {entity.name}
+                                    </button>
+                                ))}
+                            </div>
+                            {entities[currentEntityIndex] && (
+                                <div style={{ backgroundColor: BORDER, padding: '24px', borderRadius: '12px', marginBottom: '24px', border: `1px solid ${PRIMARY}` }}>
+                                    <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: TEXT, marginBottom: '16px' }}>{entities[currentEntityIndex].name} Fields (ID, Dates auto-added)</h3>
+                                    {entities[currentEntityIndex].fields.map((field, fieldIndex) => (
+                                        <div key={fieldIndex} style={{ display: 'flex', gap: '12px', marginBottom: '12px', alignItems: 'center', padding: '8px', backgroundColor: BG, borderRadius: '8px' }}>
+                                            <input type="text" value={field.name} onChange={(e) => dispatch({ type: 'UPDATE_FIELD', payload: { entityIndex: currentEntityIndex, fieldIndex, key: 'name', value: e.target.value } })} placeholder="field_name"
+                                                style={{ flex: 1, padding: '8px', border: `1px solid ${BORDER}`, backgroundColor: SURFACE, borderRadius: '4px', color: TEXT }} />
+                                            <select value={field.type} onChange={(e) => dispatch({ type: 'UPDATE_FIELD', payload: { entityIndex: currentEntityIndex, fieldIndex, key: 'type', value: e.target.value } })}
+                                                style={{ padding: '8px', border: `1px solid ${BORDER}`, backgroundColor: SURFACE, borderRadius: '4px', color: TEXT }}>
+                                                <option>String</option>
+                                                <option>Integer</option>
+                                                <option>Boolean</option>
+                                                <option>DateTime</option>
+                                            </select>
+                                            <button onClick={() => dispatch({ type: 'REMOVE_FIELD', payload: { entityIndex: currentEntityIndex, fieldIndex } })}
+                                                style={{ ...buttonStyle, padding: '8px', backgroundColor: 'transparent', color: DANGER }}>
+                                                <Trash2 style={{ width: '20px', height: '20px' }} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    <button onClick={() => dispatch({ type: 'ADD_FIELD', payload: currentEntityIndex })}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', color: SUCCESS, fontWeight: '600', marginTop: '16px', background: 'none', border: 'none', cursor: 'pointer' }}>
+                                        <Plus style={{ width: '20px', height: '20px', color: SUCCESS }} /> Add Field
+                                    </button>
+                                </div>
+                            )}
+                            <div style={{ display: 'flex', gap: '16px' }}>
+                                <button onClick={() => dispatch({ type: 'SET_STEP', payload: 1 })}
+                                    style={{ ...buttonStyle, backgroundColor: BORDER, color: TEXT, border: `1px solid ${BORDER}` }}>
+                                    ← Back
+                                </button>
+                                <button onClick={askRelationships}
+                                    style={{ ...buttonStyle, flex: 1, backgroundColor: PRIMARY, color: 'white' }}
+                                    disabled={entities.filter(e => e.name).length < 2}>
+                                    Next: Define Relationships →
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {step === 3 && (
+                        <div>
+                            <h2 style={{ fontSize: '2rem', fontWeight: 'bold', color: PRIMARY, marginBottom: '24px' }}>Step 3: Define Relationships 🔗</h2>
+                            {relationships.map((rel, index) => (
+                                <div key={index} style={{ backgroundColor: BORDER, padding: '24px', borderRadius: '12px', marginBottom: '24px', border: `2px solid ${ACCENT}` }}>
+                                    <h3 style={{ fontWeight: 'bold', fontSize: '1.125rem', marginBottom: '16px', color: TEXT }}>
+                                        <span style={{ color: WARNING }}>{rel.entity1}</span> ↔ <span style={{ color: ACCENT }}>{rel.entity2}</span>
+                                    </h3>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                        <div>
+                                            <p style={{ fontWeight: '600', marginBottom: '8px', color: '#c3c9d7' }}>Can one **{rel.entity1}** have multiple **{pluralize(rel.entity2)}**?</p>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                                <button onClick={() => dispatch({ type: 'UPDATE_RELATIONSHIP', payload: { index, key: 'entity1HasMany', value: false } })}
+                                                    style={{
+                                                        ...buttonStyle, padding: '12px 20px', border: `2px solid ${rel.entity1HasMany === false ? SUCCESS : BORDER}`,
+                                                        backgroundColor: rel.entity1HasMany === false ? SUCCESS : SURFACE, color: 'white'
+                                                    }}>
+                                                    No (One)
+                                                </button>
+                                                <button onClick={() => dispatch({ type: 'UPDATE_RELATIONSHIP', payload: { index, key: 'entity1HasMany', value: true } })}
+                                                    style={{
+                                                        ...buttonStyle, padding: '12px 20px', border: `2px solid ${rel.entity1HasMany === true ? SUCCESS : BORDER}`,
+                                                        backgroundColor: rel.entity1HasMany === true ? SUCCESS : SURFACE, color: 'white'
+                                                    }}>
+                                                    Yes (Many)
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <p style={{ fontWeight: '600', marginBottom: '8px', color: '#c3c9d7' }}>Can one **{rel.entity2}** have multiple **{pluralize(rel.entity1)}**?</p>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                                <button onClick={() => dispatch({ type: 'UPDATE_RELATIONSHIP', payload: { index, key: 'entity2HasMany', value: false } })}
+                                                    style={{
+                                                        ...buttonStyle, padding: '12px 20px', border: `2px solid ${rel.entity2HasMany === false ? SUCCESS : BORDER}`,
+                                                        backgroundColor: rel.entity2HasMany === false ? SUCCESS : SURFACE, color: 'white'
+                                                    }}>
+                                                    No (One)
+                                                </button>
+                                                <button onClick={() => dispatch({ type: 'UPDATE_RELATIONSHIP', payload: { index, key: 'entity2HasMany', value: true } })}
+                                                    style={{
+                                                        ...buttonStyle, padding: '12px 20px', border: `2px solid ${rel.entity2HasMany === true ? SUCCESS : BORDER}`,
+                                                        backgroundColor: rel.entity2HasMany === true ? SUCCESS : SURFACE, color: 'white'
+                                                    }}>
+                                                    Yes (Many)
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div style={{ paddingTop: '10px', color: '#94a3b8', fontSize: '0.875rem' }}>
+                                            {rel.entity1HasMany === false && rel.entity2HasMany === false && <p>Result: One-to-One relationship.</p>}
+                                            {rel.entity1HasMany === true && rel.entity2HasMany === false && <p>Result: One-to-Many relationship (from **{rel.entity1}** to **{rel.entity2}**).</p>}
+                                            {rel.entity1HasMany === false && rel.entity2HasMany === true && <p>Result: Many-to-One relationship (from **{rel.entity1}** to **{rel.entity2}**).</p>}
+                                            {rel.entity1HasMany === true && rel.entity2HasMany === true && <p>Result: Many-to-Many relationship (requires bridge table).</p>}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                            <div style={{ display: 'flex', gap: '16px' }}>
+                                <button onClick={() => dispatch({ type: 'SET_STEP', payload: 2 })}
+                                    style={{ ...buttonStyle, backgroundColor: BORDER, color: TEXT, border: `1px solid ${BORDER}` }}>
+                                    ← Back
+                                </button>
+                                <button onClick={handleGenerateCode} disabled={relationships.some(r => r.entity1HasMany === null || r.entity2HasMany === null)}
+                                    style={{
+                                        ...buttonStyle, flex: 1, backgroundColor: PRIMARY, color: 'white',
+                                        opacity: relationships.some(r => r.entity1HasMany === null || r.entity2HasMany === null) ? 0.5 : 1,
+                                        pointerEvents: relationships.some(r => r.entity1HasMany === null || r.entity2HasMany === null) ? 'none' : 'auto'
+                                    }}>
+                                    Generate Code →
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {step === 4 && (
+                        <div>
+                            <h2 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px', color: SUCCESS }}>
+                                <Code style={{ width: '32px', height: '32px', color: SUCCESS }} />
+                                Your Backend is Ready! 🥳
+                            </h2>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+
+                                {/* MODELS.PY */}
+                                <div style={{ backgroundColor: BG, padding: '24px', borderRadius: '12px', maxHeight: '400px', overflowY: 'auto', border: `1px solid ${SUCCESS}` }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', position: 'sticky', top: 0, backgroundColor: BG, paddingBottom: '8px' }}>
+                                        <h3 style={{ color: SUCCESS, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>app/models.py (SQLAlchemy)</h3>
+                                        <button
+                                            onClick={() => copyToClipboard(generatedCode.models, 'models')}
+                                            style={{
+                                                ...buttonStyle, padding: '8px 16px', fontSize: '0.75rem', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px',
+                                                backgroundColor: copiedCode === 'models' ? SUCCESS : BORDER,
+                                                color: 'white'
+                                            }}>
+                                            {copiedCode === 'models' ? <><Clipboard style={{ width: '16px', height: '16px' }} /> Copied!</> : <><Clipboard style={{ width: '16px', height: '16px' }} /> Copy Code</>}
+                                        </button>
+                                    </div>
+                                    <pre style={{ fontSize: '0.875rem', color: '#c1f1c1', lineHeight: '1.4', whiteSpace: 'pre-wrap' }}>{generatedCode.models}</pre>
+                                </div>
+
+                                {/* SCHEMAS.PY */}
+                                <div style={{ backgroundColor: BG, padding: '24px', borderRadius: '12px', maxHeight: '400px', overflowY: 'auto', border: `1px solid ${PRIMARY}` }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', position: 'sticky', top: 0, backgroundColor: BG, paddingBottom: '8px' }}>
+                                        <h3 style={{ color: PRIMARY, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>app/schemas.py (Marshmallow)</h3>
+                                        <button
+                                            onClick={() => copyToClipboard(generatedCode.schemas, 'schemas')}
+                                            style={{
+                                                ...buttonStyle, padding: '8px 16px', fontSize: '0.75rem', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px',
+                                                backgroundColor: copiedCode === 'schemas' ? SUCCESS : BORDER,
+                                                color: 'white'
+                                            }}>
+                                            {copiedCode === 'schemas' ? <><Clipboard style={{ width: '16px', height: '16px' }} /> Copied!</> : <><Clipboard style={{ width: '16px', height: '16px' }} /> Copy Code</>}
+                                        </button>
+                                    </div>
+                                    <pre style={{ fontSize: '0.875rem', color: '#88d7ff', lineHeight: '1.4', whiteSpace: 'pre-wrap' }}>{generatedCode.schemas}</pre>
+                                </div>
+
+                                {/* ROUTES.PY */}
+                                <div style={{ backgroundColor: BG, padding: '24px', borderRadius: '12px', maxHeight: '400px', overflowY: 'auto', border: `1px solid ${ACCENT}` }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', position: 'sticky', top: 0, backgroundColor: BG, paddingBottom: '8px' }}>
+                                        <h3 style={{ color: ACCENT, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>app/routes.py (Flask Blueprint)</h3>
+                                        <button
+                                            onClick={() => copyToClipboard(generatedCode.routes, 'routes')}
+                                            style={{
+                                                ...buttonStyle, padding: '8px 16px', fontSize: '0.75rem', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px',
+                                                backgroundColor: copiedCode === 'routes' ? SUCCESS : BORDER,
+                                                color: 'white'
+                                            }}>
+                                            {copiedCode === 'routes' ? <><Clipboard style={{ width: '16px', height: '16px' }} /> Copied!</> : <><Clipboard style={{ width: '16px', height: '16px' }} /> Copy Code</>}
+                                        </button>
+                                    </div>
+                                    <pre style={{ fontSize: '0.875rem', color: '#ff88ff', lineHeight: '1.4', whiteSpace: 'pre-wrap' }}>{generatedCode.routes}</pre>
+                                </div>
+                            </div>
+
+                            <div style={{ backgroundColor: BORDER, border: `1px solid ${PRIMARY}`, borderRadius: '12px', padding: '24px', marginTop: '32px' }}>
+                                <h3 style={{ fontWeight: 'bold', color: PRIMARY, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}><Route style={{ width: '20px', height: '20px' }} /> Next Steps to Deploy:</h3>
+                                <ol style={{ listStyle: 'decimal', paddingLeft: '24px', color: '#c3c9d7', lineHeight: '1.6' }}>
+                                    <li>Place **models.py**, **schemas.py**, and **routes.py** in your **app/** directory.</li>
+                                    <li>Ensure you have a basic **run.py** and **extensions.py** file set up.</li>
+                                    <li>Run database initialization (**python init\_db.py** or similar).</li>
+                                    <li>Start the server (**python run.py**).</li>
+                                    <li>Test your API health endpoint: **curl http://localhost:5555/api/health**</li>
+                                </ol>
+                            </div>
+
+                            <button onClick={() => dispatch({ type: 'RESET' })}
+                                style={{ ...buttonStyle, backgroundColor: PRIMARY, color: 'white', width: '100%', padding: '20px', fontSize: '18px', marginTop: '24px' }}>
+                                Create Another Backend
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
         </div>
-
-        <div style={{ display: 'flex', gap: '16px' }}>
-          <button
-            onClick={() => setMode('choose')}
-            style={{
-              ...buttonStyle,
-              backgroundColor: SURFACE,
-              color: TEXT,
-              border: `2px solid ${BORDER}`,
-              flex: 1
-            }}
-          >
-            ← Start Over
-          </button>
-          <button
-            onClick={() => setMode(mode === 'plain-english' ? 'plain-english' : mode === 'outline' ? 'outline' : 'visual')}
-            style={{
-              ...buttonStyle,
-              backgroundColor: WARNING,
-              color: '#fff',
-              flex: 1
-            }}
-          >
-            ← Back to Editor
-          </button>
-        </div>
-      </div>
     );
-  };
-
-  // Helper function
-  const capitalize = (str) => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
-
-  // ==============================================
-  // MAIN RENDER
-  // ==============================================
-  return (
-    <div style={{
-      minHeight: '100vh',
-      backgroundColor: BG,
-      color: TEXT,
-      padding: '40px 20px',
-      fontFamily: 'system-ui, -apple-system, sans-serif'
-    }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <div style={{
-          padding: '32px',
-          backgroundColor: SURFACE,
-          borderRadius: '16px',
-          border: `2px solid ${BORDER}`
-        }}>
-          {mode === 'choose' && <ModeSelector />}
-          {mode === 'plain-english' && <PlainEnglishMode />}
-          {mode === 'outline' && <OutlineMode />}
-          {mode === 'visual' && <VisualMode />}
-          {mode === 'results' && <ResultsView />}
-        </div>
-      </div>
-    </div>
-  );
 }
