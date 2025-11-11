@@ -15,24 +15,26 @@ export const AppProvider = ({ children }) => {
 
     // --- Data Fetching: All Categories ---
 useEffect(() => {
-        if (userInfo) {
-            fetch(`${API_URL}/categories`)
-                .then(res => {
-                    if (!res.ok) {
-                        throw new Error("Failed to load categories");
-                    }
-                    return res.json();
-                })
-                .then(data => setAllCategories(data))
-                .catch(err => {
-                    console.error("Failed to load categories", err);
-                    setAllCategories([]); 
-                });
-        } else {
-        
-             setAllCategories([]); 
-        }
-    }, [userInfo]);
+    // 1. Check Login State: Only proceed if userInfo is not null
+    if (userInfo) {
+        fetch(`${API_URL}/categories`)
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error("Failed to load categories");
+                }
+                return res.json();
+            })
+            .then(data => setAllCategories(data))
+            .catch(err => {
+                console.error("Failed to load categories", err);
+                setAllCategories([]); 
+            });
+    } else {
+        // 2. Clear Categories on Logout: This runs on initial mount (userInfo is null) 
+        // AND when the user logs out (userInfo is set back to null).
+        setAllCategories([]); 
+    }
+}, [userInfo]);
 
 
     // --- Session Check ---

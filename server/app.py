@@ -206,7 +206,7 @@ def check_session():
     return jsonify({"logged_in": False})
 
 # Categories #
-@app.route('/categories/', methods=['GET'])
+@app.route('/categories', methods=['GET'])
 def get_categories():
     categories = Category.query.all()
     return jsonify(categories_schema.dump(categories))
