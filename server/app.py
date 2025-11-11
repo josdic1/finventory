@@ -30,13 +30,16 @@ class User(db.Model):
     name = db.Column(db.String(80), unique=True, nullable=False)
     _password_hash = db.Column(db.String(128), nullable=False)
 
-    @property
-    def categories(self):
-        return db.session.query(Category)\
-                     .join(Product)\
-                     .filter(Product.user_id == self.id)\
-                     .distinct()\
-                     .all()
+    # User has many products
+    products = db.relationship('Product', back_populates='user', cascade='all, delete-orphan')
+    
+    # User has many categories THROUGH products (many-to-many via Product table)
+    categories = db.relationship('Category', 
+                                secondary='products',  # Product is the join table!
+                                primaryjoin='User.id == Product.user_id',
+                                secondaryjoin='Product.category_id == Category.id',
+                                back_populates='users',
+                                viewonly=True)  
 
     @property
     def password_hash(self):
@@ -50,16 +53,27 @@ class User(db.Model):
     def authenticate(self, password):
         return bcrypt.check_password_hash(self._password_hash, password)
     
+    def __repr__(self):
+        return '<User %r>' % self.name
+    
 class Category(db.Model):
     __tablename__ = 'categories'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), unique=True, nullable=False)
 
-    products = db.relationship('Product', backref='category', lazy=True)
+    # Change backref to back_populates to match their pattern
+    products = db.relationship('Product', back_populates='category', cascade='all, delete-orphan')
+
+    users = db.relationship('User',
+                           secondary='products',
+                           primaryjoin='Category.id == Product.category_id',
+                           secondaryjoin='Product.user_id == User.id',
+                           back_populates='categories',
+                           viewonly=True)
 
     def __repr__(self):
         return '<Category %r>' % self.name
-
+    
 class Product(db.Model):
     __tablename__ = 'products'
     id = db.Column(db.Integer, primary_key=True)
@@ -69,12 +83,15 @@ class Product(db.Model):
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     
+    user = db.relationship('User', back_populates='products')
+    category = db.relationship('Category', back_populates='products')
+
     def __repr__(self):
         return '<Product %r>' % self.name 
 
 
+# ------------------------------
 
-# -------------------------------------------------
 # Schema
 # -------------------------------------------------
 class UserSchema(ma.SQLAlchemyAutoSchema):

@@ -7,6 +7,7 @@ import { ProductFormEdit } from "./components/ProductFormEdit";
 import { ProductFormNew } from "./components/ProductFormNew";
 import { ProductCard } from "./pages/ProductCard";
 import { ProtectedWrapper } from "./components/ProtectedWrapper"; 
+import { SchemaBuilder } from "./components/SchemaBuilder";
 
 export const routes = [
     {
@@ -46,6 +47,10 @@ export const routes = [
                  {
                         path: "/dashboard",
                         element: <DebugDashboard />, 
+                    },
+                       {
+                        path: "/schema",
+                        element: <SchemaBuilder />, 
                     },
                 ],
             },

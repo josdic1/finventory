@@ -20,6 +20,7 @@ export function NavBar() {
                         <li>Welcome, {userInfo.name.toUpperCase()}!</li>
                         <li><NavLink to="/products/new">New Product</NavLink></li>
                         <li><NavLink to="/dashboard">Backend</NavLink></li>
+                        <li><NavLink to="/schema">Schema</NavLink></li>
                         {isHomePage && <li><button onClick={() => setShowStateBar(!showStateBar)}>State</button></li>}
                         <li><button onClick={logout}>Logout</button></li>
                     </>
