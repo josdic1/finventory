@@ -4,8 +4,8 @@ import { ErrorPage } from "./pages/ErrorPage";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
 import { NewCategoryForm } from "./components/NewCategoryForm";
-import { ProductFormEdit } from "./components/ProductFormEdit";
-import { ProductFormNew } from "./components/ProductFormNew";
+import { ProductFormEditFormik } from "./components/ProductFormEditFormik";
+import { ProductFormNewFormik } from "./components/ProductFormNewFormik";
 import { ProductCard } from "./pages/ProductCard";
 import { ProtectedWrapper } from "./components/ProtectedWrapper"; 
 import { SchemaBuilder } from "./components/SchemaBuilder";
@@ -38,12 +38,12 @@ export const routes = [
                     },
                     {
                         path: "/products/new",
-                        element: <ProductFormNew />, 
+                        element: <ProductFormNewFormik />, 
                     },
                     {
                      
                         path: "/products/:id/edit",
-                        element: <ProductFormEdit />, 
+                        element: <ProductFormEditFormik />, 
                     },
                           {
                 path: "/products/:id",

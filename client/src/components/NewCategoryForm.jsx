@@ -1,58 +1,77 @@
-import { useApp } from "../hooks/useApp"
+import { useApp } from "../hooks/useApp";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { useFormikForm } from "../hooks/useFormikForm"; // 💡 Import Formik hook
+import { categorySchema } from "../validators/productValidation"; // 💡 Import validation
 
 export function NewCategoryForm() {
     const { allCategories, fetchAllCategories, createCategory, setActiveCategoryId } = useApp();
-    const [ formData, setFormData ] = useState({
-        name: ''
-    })
     const navigate = useNavigate();
 
+    // --- 1. Formik Setup ---
+    const formik = useFormikForm({
+        initialValues: { name: '' },
+        validationSchema: categorySchema, // Uses the Yup schema for basic validation
+        onSubmit: async (values, { resetForm }) => {
+            // --- Custom Duplication Check (Runs after Yup validation) ---
+            
+            let isDuplicate = false;
+            if (allCategories.length > 0) {
+                const duplicate = allCategories.find(c => 
+                    c.name.toLowerCase() === values.name.toLowerCase()
+                );
+                if (duplicate?.name) {
+                    alert('That category exists, please try again');
+                    isDuplicate = true;
+                }
+            }
+
+            if (!isDuplicate) {
+                const newCategoryObject = await createCategory(values); // API call
+                
+                if (newCategoryObject && newCategoryObject.id) {
+                    // Set active ID and navigate after success
+                    setActiveCategoryId(parseInt(newCategoryObject.id));
+                    resetForm(); // Clear the form
+                    navigate('/products/new');
+                } else {
+                    alert('Failed to create category.');
+                }
+            }
+        }
+    });
+
+    // --- 2. Fetch Categories on Mount ---
     useEffect(() => {
         fetchAllCategories();
-      }, []);
-
-      if (allCategories.length === 0) {
-        return <h2>Loading Categories...</h2>; 
-    }
-
-    const onFormChange = (e) => {
-        setFormData(prev => ({
-            ...prev, 
-            name: e.target.value
-        }))
-    }
-
-    const onCreateCategory = async (e) => {
-        e.preventDefault();
-        if(allCategories.length > 0) {
-            const duplicate = allCategories.find(c => (
-                c.name.toLowerCase() === formData.name.toLowerCase()
-            ))
-            if (duplicate?.name) {
-        alert('That category exists, please try again')
-    } else {
-        const categoryData = { name: formData.name };
-               const newCategoryObject = await createCategory(categoryData)
-               setActiveCategoryId(parseInt(newCategoryObject.id))
-                navigate('/products/new')
-            }
-        } else {
-            console.log('No categories available')
-        }
-
-    
-    }
+    }, [fetchAllCategories]);
 
 
+    // --- 3. Rendering ---
     return (
-        <>
-        <form onSubmit={onCreateCategory}>
-        <label htmlFor="name">Name: </label>
-        <input type='text' onChange={onFormChange} value={formData.name} placeholder='New category'/>
-        <button type='submit'> Add </button>
+        <form onSubmit={formik.handleSubmit}> {/* 💡 Use Formik's handleSubmit */}
+            <h2>Add New Category</h2>
+            
+            <label htmlFor="name">Name: </label>
+            <input 
+                type='text' 
+                name='name' // 💡 Formik needs the 'name' attribute
+                placeholder='New category'
+                // 💡 Bind Formik handlers
+                value={formik.values.name} 
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+            />
+            
+            {/* 💡 Display Formik validation error message */}
+            {formik.touched.name && formik.errors.name && 
+                <div style={{color: 'red'}}>{formik.errors.name}</div>
+            }
+
+            <button type='submit' disabled={formik.isSubmitting}> Add </button>
+            
+            {/* Shows status when loading categories */}
+            {allCategories.length === 0 && <p style={{marginTop: '10px'}}>Fetching categories for duplicate check...</p>}
         </form>
-        </>
-    )
+    );
 }
