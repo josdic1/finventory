@@ -121,11 +121,12 @@ def update_product(id):
         return jsonify({"error": "name is required"}), 400
     
     product.name = data['name']
-    
     if 'rack' in data:
         product.rack = data['rack']
     if 'bin' in data:
         product.bin = data['bin']
+    if 'category_id' in data:
+        product.category_id = data['category_id']
     
     db.session.commit()
     return product_schema.dump(product), 200

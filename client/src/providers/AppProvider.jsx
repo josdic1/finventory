@@ -200,23 +200,37 @@ export const AppProvider = ({ children }) => {
         }
     }
 
-    const value = useMemo(() => ({
-        userInfo,
-        loading,
-        login,
-        logout,
-        userCategories,
-        allCategories,
-        activeCategoryId, setActiveCategoryId, 
-        createCategory,   
-        createProduct,
-        updateProduct,
-        deleteProduct,
-        showStateBar, setShowStateBar,
-        fetchAllCategories,
-        tempFormName, setTempFormName
-    }), 
-    [userInfo, loading, userCategories, allCategories, activeCategoryId, showStateBar, tempFormName]);
+  const value = useMemo(() => ({
+    userInfo,
+    loading,
+    login, // Stable (declared with const/async function)
+    logout, // Stable
+    userCategories,
+    allCategories, 
+    fetchAllCategories, // 💡 Function: Should be stable (useCallback) or defined outside.
+    activeCategoryId, 
+    setActiveCategoryId, // Stable
+    createCategory, // Stable
+    createProduct, // Stable
+    updateProduct, // Stable
+    deleteProduct, // Stable
+    showStateBar, 
+    setShowStateBar, // Stable
+    tempFormName, 
+    setTempFormName // Stable
+}), 
+[
+    // List only the state values (data) that, when changed, 
+    // require the context value object to be recalculated.
+    userInfo, 
+    loading, 
+    userCategories, 
+    allCategories, 
+    activeCategoryId, 
+    showStateBar, 
+    tempFormName 
+
+]);
 
     return (
         <AppContext.Provider value={value}>
