@@ -15,8 +15,6 @@ class User(db.Model):
     # User has many categories THROUGH products (many-to-many via Product table)
     categories = db.relationship('Category', 
                                 secondary='products',  # Product is the join table!
-                                primaryjoin='User.id == Product.user_id',
-                                secondaryjoin='Product.category_id == Category.id',
                                 back_populates='users',
                                 viewonly=True)  
 
@@ -40,13 +38,11 @@ class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), unique=True, nullable=False)
 
-    # Change backref to back_populates to match their pattern
+    # Change backref to back_populates to match pattern
     products = db.relationship('Product', back_populates='category', cascade='all, delete-orphan')
 
     users = db.relationship('User',
                            secondary='products',
-                           primaryjoin='Category.id == Product.category_id',
-                           secondaryjoin='Product.user_id == User.id',
                            back_populates='categories',
                            viewonly=True)
 

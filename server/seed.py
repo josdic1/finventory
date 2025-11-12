@@ -1,103 +1,126 @@
-from app import create_app
-from app.extensions import db, bcrypt 
-from app.models import User, Category, Product 
-import random
+#!/usr/bin/env python3
+"""
+Seed file for the Inventory Management System
+Run this file to populate the database with sample data
+"""
 
-def seed_data():
-    """
-    Seeds the database with sample inventory data by initializing the Flask app,
-    clearing tables, and populating them with new data.
-    """
-    # 1. Instantiate the Flask application instance
-    app = create_app() 
+from app import create_app
+from app.extensions import db
+from app.models import User, Category, Product
+
+def seed_database():
+    """Populate the database with sample data"""
+    
+    app = create_app()
     
     with app.app_context():
-        # --- Initialization ---
-        print("🛠️ Clearing and recreating database tables...")
+        # Clear existing data
+        print("Clearing existing data...")
         db.drop_all()
         db.create_all()
         
-        # --- Create Users ---
-        print("\n👥 Creating Users...")
-        
-        # FIX: Generate the actual password hash using bcrypt for security
-        hashed_password = bcrypt.generate_password_hash('password123').decode('utf-8')
-        
-        josh = User(name='Josh', password_hash=hashed_password)
-        dor = User(name='Dor', password_hash=hashed_password)
-        
-        db.session.add_all([josh, dor])
-        db.session.commit()
-        print(f"   - Created users: Josh and Dor. (Login Password: 'password123')")
-        
-        # --- Create Categories ---
-        print("\n🏷️ Creating Categories...")
-        category_names = [
-            'Electronics', 'Office Supplies', 'Tools', 'Clothing', 'Books',
-            'Sporting Goods', 'Kitchen', 'Furniture', 'Automotive', 'Garden'
+        # Create Categories
+        print("Creating categories...")
+        categories = [
+            Category(name="Electronics"),
+            Category(name="Tools"),
+            Category(name="Office Supplies"),
+            Category(name="Hardware"),
+            Category(name="Safety Equipment"),
         ]
         
-        categories = {}
-        for name in category_names:
-            cat = Category(name=name)
-            categories[name] = cat
-            db.session.add(cat)
+        for category in categories:
+            db.session.add(category)
+        
+        db.session.commit()
+        print(f"✓ Created {len(categories)} categories")
+        
+        # Create Users
+        print("Creating users...")
+        user1 = User(name="alice")
+        user1.password_hash = "1111"
+        
+        user2 = User(name="bob")
+        user2.password_hash = "1111"
+        
+        user3 = User(name="charlie")
+        user3.password_hash = "1111"
+        
+        db.session.add_all([user1, user2, user3])
+        db.session.commit()
+        print(f"✓ Created 3 users (password for all: '1111')")
+        
+        # Get categories from DB (to get their IDs)
+        electronics = Category.query.filter_by(name="Electronics").first()
+        tools = Category.query.filter_by(name="Tools").first()
+        office = Category.query.filter_by(name="Office Supplies").first()
+        hardware = Category.query.filter_by(name="Hardware").first()
+        safety = Category.query.filter_by(name="Safety Equipment").first()
+        
+        # Create Products for Alice
+        print("Creating products for alice...")
+        alice_products = [
+            Product(name="Laptop", rack="A1", bin="B3", category_id=electronics.id, user_id=user1.id),
+            Product(name="USB Cable", rack="A1", bin="B5", category_id=electronics.id, user_id=user1.id),
+            Product(name="Screwdriver Set", rack="C2", bin="D1", category_id=tools.id, user_id=user1.id),
+            Product(name="Stapler", rack="B3", bin="A2", category_id=office.id, user_id=user1.id),
+            Product(name="Paper Clips", rack="B3", bin="A3", category_id=office.id, user_id=user1.id),
+        ]
+        
+        for product in alice_products:
+            db.session.add(product)
+        
+        # Create Products for Bob
+        print("Creating products for bob...")
+        bob_products = [
+            Product(name="Monitor", rack="A2", bin="C1", category_id=electronics.id, user_id=user2.id),
+            Product(name="Keyboard", rack="A2", bin="C2", category_id=electronics.id, user_id=user2.id),
+            Product(name="Hammer", rack="D1", bin="E3", category_id=tools.id, user_id=user2.id),
+            Product(name="Wrench", rack="D1", bin="E4", category_id=tools.id, user_id=user2.id),
+            Product(name="Bolts", rack="E5", bin="F2", category_id=hardware.id, user_id=user2.id),
+            Product(name="Screws", rack="E5", bin="F3", category_id=hardware.id, user_id=user2.id),
+        ]
+        
+        for product in bob_products:
+            db.session.add(product)
+        
+        # Create Products for Charlie
+        print("Creating products for charlie...")
+        charlie_products = [
+            Product(name="Safety Goggles", rack="F1", bin="G2", category_id=safety.id, user_id=user3.id),
+            Product(name="Hard Hat", rack="F1", bin="G3", category_id=safety.id, user_id=user3.id),
+            Product(name="Drill", rack="D2", bin="E5", category_id=tools.id, user_id=user3.id),
+            Product(name="Mouse", rack="A3", bin="C4", category_id=electronics.id, user_id=user3.id),
+            Product(name="Notebook", rack="B4", bin="A5", category_id=office.id, user_id=user3.id),
+            Product(name="Gloves", rack="F2", bin="G4", category_id=safety.id, user_id=user3.id),
+            Product(name="Nails", rack="E6", bin="F4", category_id=hardware.id, user_id=user3.id),
+        ]
+        
+        for product in charlie_products:
+            db.session.add(product)
         
         db.session.commit()
         
-        # Rack and bin options
-        racks = ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2', 'C3', 'D1', 'D2', 'E1']
-        bins = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12']
+        print(f"✓ Created {len(alice_products)} products for alice")
+        print(f"✓ Created {len(bob_products)} products for bob")
+        print(f"✓ Created {len(charlie_products)} products for charlie")
         
-        # --- Create Products ---
-        print("\n📦 Creating Products...")
-        
-        products_by_category = {
-            'Electronics': ['Wireless Mouse', 'USB-C Cable', 'Bluetooth Headphones', 'Phone Charger', 'Laptop Stand', 'HDMI Cable', 'Webcam', 'Power Bank', 'LED Desk Lamp', 'Bluetooth Speaker'],
-            'Office Supplies': ['Ballpoint Pens (Box of 12)', 'Yellow Legal Pads', 'Stapler', 'Paper Clips (Box)', 'Sticky Notes', 'File Folders', 'Desk Organizer', 'Whiteboard Markers', 'Scissors', 'Tape Dispenser'],
-            'Tools': ['Cordless Drill', 'Socket Set', 'Hammer', 'Screwdriver Set', 'Tape Measure', 'Level', 'Utility Knife', 'Pliers', 'Adjustable Wrench', 'Flashlight'],
-            'Clothing': ['Safety Vests', 'Work Gloves', 'Steel Toe Boots', 'Baseball Caps', 'Rain Jackets', 'Cargo Pants', 'T-Shirts (White)', 'Hooded Sweatshirt', 'Winter Jacket', 'Work Coveralls'],
-            'Books': ['Python Programming Guide', 'Project Management Handbook', 'Inventory Management 101', 'Leadership Principles', 'Excel for Business', 'Supply Chain Basics', 'Time Management', 'Communication Skills', 'SQL Fundamentals', 'Warehouse Operations Manual'],
-            'Sporting Goods': ['Basketball', 'Soccer Ball', 'Yoga Mat', 'Resistance Bands', 'Jump Rope', 'Tennis Racket', 'Bicycle Helmet', 'Water Bottle', 'Gym Bag', 'Running Shoes'],
-            'Kitchen': ['Coffee Maker', 'Microwave', 'Toaster', 'Blender', 'Dish Soap', 'Paper Towels', 'Coffee Mugs (Set of 6)', 'Plastic Food Containers', 'Cutlery Set', 'Dish Rack'],
-            'Furniture': ['Office Chair', 'Folding Table', 'File Cabinet', 'Bookshelf', 'Standing Desk', 'Storage Cabinet', 'Desk Lamp', 'Rolling Cart', 'Ergonomic Stool', 'Conference Table'],
-            'Automotive': ['Motor Oil (5W-30)', 'Windshield Wipers', 'Car Battery', 'Jumper Cables', 'Tire Pressure Gauge', 'Air Freshener', 'Microfiber Towels', 'Floor Mats', 'First Aid Kit', 'Emergency Roadside Kit'],
-            'Garden': ['Garden Hose', 'Pruning Shears', 'Watering Can', 'Garden Gloves', 'Potting Soil (20lb)', 'Plant Fertilizer', 'Rake', 'Shovel', 'Wheelbarrow', 'Seed Packets']
-        }
-        
-        users = [josh, dor]
-        
-        for category_name, product_names in products_by_category.items():
-            for product_name in product_names:
-                product = Product(
-                    name=product_name,
-                    rack=random.choice(racks),
-                    bin=random.choice(bins),
-                    category_id=categories[category_name].id,
-                    user_id=random.choice(users).id
-                )
-                db.session.add(product)
-        
-        db.session.commit()
-        
-        total_products = sum(len(products) for products in products_by_category.values())
-        
-        print("\n--- 🏁 SEEDING SUMMARY ----------------------")
-        print(f"| **STATUS:**\t\t\t\t**✅ COMPLETE!**")
-        print(f"| **Total Users:**\t\t\t2")
-        print(f"| **Total Categories:**\t\t{len(categories)}")
-        print(f"| **Total Products Created:**\t{total_products}")
-        print("--------------------------------------------")
-        
-        print("\n📊 **Product Distribution by Category:**")
-        
-        max_name_len = max(len(name) for name in category_names)
-
-        for cat_name in category_names:
-            count = len(products_by_category[cat_name])
-            print(f"   - {cat_name.ljust(max_name_len)}: {count} products")
-        
-        print(f"\n📂 Database file location: server/app.db (SQLite)")
+        # Print summary
+        print("\n" + "="*50)
+        print("DATABASE SEEDED SUCCESSFULLY!")
+        print("="*50)
+        print("\nUsers created:")
+        print("  - alice (password: password123) - 5 products")
+        print("  - bob (password: password123) - 6 products")
+        print("  - charlie (password: password123) - 7 products")
+        print("\nCategories created:")
+        print(f"  - Electronics ({Product.query.filter_by(category_id=electronics.id).count()} products)")
+        print(f"  - Tools ({Product.query.filter_by(category_id=tools.id).count()} products)")
+        print(f"  - Office Supplies ({Product.query.filter_by(category_id=office.id).count()} products)")
+        print(f"  - Hardware ({Product.query.filter_by(category_id=hardware.id).count()} products)")
+        print(f"  - Safety Equipment ({Product.query.filter_by(category_id=safety.id).count()} products)")
+        print(f"\nTotal: {Product.query.count()} products")
+        print("="*50)
 
 if __name__ == '__main__':
-    seed_data()
+    seed_database()

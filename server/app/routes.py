@@ -66,6 +66,23 @@ def get_categories():
     return jsonify(categories_schema.dump(categories))
 
 
+@bp.route('/categories/new', methods=['POST'])
+def create_category():
+    data = request.get_json()
+    if not data or 'name' not in data:
+        return jsonify({"error": "name is required"}), 400
+    
+    category_name = data['name']
+
+    if Category.query.filter_by(name=category_name).first():
+        return jsonify({"error": "Category already exists"}), 409
+    
+    new_category = Category(name=category_name)
+    db.session.add(new_category)
+    db.session.commit()
+    return category_schema.dump(new_category), 201
+
+
 # Products  #
 @bp.route('/products/new', methods=['POST'])
 def create_product():

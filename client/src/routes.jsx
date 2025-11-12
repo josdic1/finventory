@@ -3,6 +3,7 @@ import { DebugDashboard } from "./components/DebugDashboard";
 import { ErrorPage } from "./pages/ErrorPage";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
+import { NewCategoryForm } from "./components/NewCategoryForm";
 import { ProductFormEdit } from "./components/ProductFormEdit";
 import { ProductFormNew } from "./components/ProductFormNew";
 import { ProductCard } from "./pages/ProductCard";
@@ -31,6 +32,10 @@ export const routes = [
                 
                 element: <ProtectedWrapper />, 
                 children: [
+                    {
+                        path: "/categories/new",
+                        element: <NewCategoryForm />, 
+                    },
                     {
                         path: "/products/new",
                         element: <ProductFormNew />, 
