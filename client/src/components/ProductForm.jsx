@@ -2,17 +2,16 @@
 import { useFormikForm } from '../hooks/useFormikForm';
 import { productSchema } from '../validators/productValidation';
 import { useApp } from '../hooks/useApp';
-import { useNavigate } from 'react-router-dom'; // 💡 1. Import useNavigate
+import { useNavigate } from 'react-router-dom'; // 💡 Import useNavigate
 
 export function ProductForm({ 
     product, 
     onSuccess, 
-    // New props for restoration/pre-selection (needed by ProductFormNewFormik)
     activeCategoryId, 
     tempFormName 
 }) {
   const { createProduct, updateProduct, allCategories } = useApp();
-  const navigate = useNavigate(); // 💡 2. Initialize useNavigate
+  const navigate = useNavigate(); // 💡 Initialize useNavigate
 
   // Helper to find the current category object for display
   const currentCategory = allCategories.find(c => c.id === product?.category_id);
@@ -25,7 +24,6 @@ export function ProductForm({
     rack: product?.rack || '',
     bin: product?.bin || '',
     // Determine initial category: existing product > activeCategoryId > empty string
-    // NOTE: .toString() is required because Formik values must be strings for <select>
     category_id: product?.category_id?.toString() || activeCategoryId?.toString() || '',
   };
 
@@ -54,6 +52,17 @@ export function ProductForm({
 
   return (
     <form onSubmit={formik.handleSubmit}>
+      <button 
+  type="button" 
+  onClick={() => navigate(-1)} // ⬅️ Pass the number -1 directly
+  style={{ 
+  color: 'black',          /* Text color */
+  backgroundColor: '#e6e4c6ff',
+
+}}
+>
+  Go Back
+</button>
       <h2>{product ? `Edit ${product.name}` : 'Create New Product'}</h2>
 
       {/* --- NAME INPUT --- */}
@@ -81,11 +90,28 @@ export function ProductForm({
         </>
       )}
 
-      {/* 💡 3. THE MISSING BUTTON! (Only renders in NEW mode, which doesn't have a 'product' prop) */}
+      {/* 💡 THE MISSING BUTTON FIX (Only renders in NEW mode) */}
       {!product && (
-        <p>
+        <p style={{ marginTop: '5px', fontSize: '0.9em' }}>
             Don't see your category? Add it 
-            <button type='button' onClick={() => navigate('/categories/new')}> HERE</button>
+            <button 
+              type='button' 
+              onClick={() => navigate('/categories/new')}
+              // 💡 STYLING FIX: Make button look like a link
+              style={{
+                background: 'none',
+                color: '#007bff', 
+                border: 'none',
+                padding: '0',
+                textDecoration: 'underline', 
+                cursor: 'pointer',
+                fontSize: 'inherit', 
+                marginLeft: '4px'
+              }}
+            > 
+              HERE
+            </button>
+            .
         </p>
       )}
 

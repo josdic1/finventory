@@ -6,6 +6,17 @@ export function ProductItem({ product, deleteProduct }) {
   // You can destructure for readability – it's safe
   const { id, name, rack, bin } = product;
 
+  // 💡 New function to handle confirmation and deletion
+  const handleDeleteClick = () => {
+    const isConfirmed = window.confirm(
+      `Are you sure you want to delete the product: ${name}? This action cannot be undone.`
+    );
+
+    if (isConfirmed) {
+      deleteProduct(id);
+    }
+  };
+
   return (
     <li className="product-item">
       <div className="product-details">
@@ -14,7 +25,9 @@ export function ProductItem({ product, deleteProduct }) {
 
         <button onClick={() => navigate(`/products/${id}`)}>View</button>
         <button onClick={() => navigate(`/products/${id}/edit`)}>Edit</button>
-        <button onClick={() => deleteProduct(id)}>Delete</button>
+        
+
+        <button onClick={handleDeleteClick}>Delete</button> 
       </div>
     </li>
   );

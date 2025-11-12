@@ -50,6 +50,17 @@ export function NewCategoryForm() {
     // --- 3. Rendering ---
     return (
         <form onSubmit={formik.handleSubmit}> {/* 💡 Use Formik's handleSubmit */}
+             <button 
+  type="button" 
+  onClick={() => navigate(-1)} // ⬅️ Pass the number -1 directly
+  style={{ 
+  color: 'black',          /* Text color */
+  backgroundColor: '#e6e4c6ff',
+
+}}
+>
+  Go Back
+</button>
             <h2>Add New Category</h2>
             
             <label htmlFor="name">Name: </label>
