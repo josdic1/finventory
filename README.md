@@ -123,3 +123,6 @@ Please make sure to update tests as appropriate.
 ## License
 
 [MIT](https://choosealicense.com/licenses/mit/)
+
+## Blog Article
+[Data Freshness: A Full-Stack Challenge](https://jd180.hashnode.dev/data-freshness-a-full-stack-challenge)
